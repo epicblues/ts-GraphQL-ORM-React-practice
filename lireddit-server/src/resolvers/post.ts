@@ -1,6 +1,6 @@
 import { Post } from "../entities/Post";
 import { MyContext } from "../types";
-import { Arg, Ctx, Mutation, Query, Resolver } from "type-graphql";
+import { Arg, Ctx, Int, Mutation, Query, Resolver } from "type-graphql";
 
 @Resolver()
 export class PostResolver {
@@ -24,5 +24,42 @@ export class PostResolver {
     const newPost = em.create(Post, { title });
     await em.persistAndFlush(newPost);
     return newPost;
+  }
+
+  @Mutation(() => Post, { nullable: true })
+  async updatePost(
+    @Arg("title", () => String, { nullable: true }) title: string,
+    @Arg("id") id: number,
+    @Ctx() { em }: MyContext
+  ): Promise<Post | null> {
+    const post = await em.findOne(Post, { id });
+    if (!post) {
+      return null;
+    }
+    if (typeof title !== "undefined") {
+      post.title = title;
+      await em.persistAndFlush(post); // update도 똑같이 persisAndFlush를 사용한다.
+      // 내가 처음에 했던 nativeUpdate랑 차이점
+    }
+
+    return post;
+  }
+  @Mutation(() => Boolean)
+  async deletePost(
+    @Ctx() { em }: MyContext,
+    @Arg("title", () => String, { nullable: true }) title?: string,
+    @Arg("id", () => Int, { nullable: true }) id?: number
+  ): Promise<boolean> {
+    try {
+      if (typeof title !== "undefined") {
+        await em.nativeDelete(Post, { title });
+        return true;
+      }
+      await em.nativeDelete(Post, { id });
+    } catch (err) {
+      return false;
+    }
+
+    return true;
   }
 }
