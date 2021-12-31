@@ -1,22 +1,40 @@
 import dotenv from "dotenv";
 dotenv.config();
+import "reflect-metadata";
 import { MikroORM } from "@mikro-orm/core";
 import { __prod__ } from "./constants";
-import { Post } from "./entities/Post";
 import microConfig from "./mikro-orm.config";
+import express from "express";
+import { ApolloServer } from "apollo-server-express";
+import { buildSchema } from "type-graphql";
+import { HelloResolver } from "./resolvers/hello";
+import { PostResolver } from "./resolvers/post";
 
 try {
   (async () => {
     const orm = await MikroORM.init(microConfig);
     // await orm.getMigrator().up();
-    // 다른 db 작업을 시작하기 전에 migration을 먼저 수행한다.
-    // orm 설정에 migration 프로퍼티가 유효해야 한다.
-    const post = orm.em.create(Post, { title: "my third post" });
-    await orm.em.persistAndFlush(post);
+    const app = express();
 
-    const posts = await orm.em.find(Post, {});
-    // mongodb처럼 모든 Post 레코드 찾기
-    console.log(posts);
+    const apolloServer = new ApolloServer({
+      schema: await buildSchema({
+        resolvers: [HelloResolver, PostResolver],
+        validate: false,
+      }),
+      context: () => ({ em: orm.em }), // 각 resolver가 db에 실제로 접근하기 위한 연결
+    });
+
+    await apolloServer.start();
+    // graphql 서버 생성
+    app.get("/", (_, res) => {
+      // 사용하지 않는 매개변수는 _로 표현하는 것이 관례?
+
+      res.send("hello world");
+    });
+    apolloServer.applyMiddleware({ app }); // express에 graphql endpoint 생성
+    app.listen(4000, () => {
+      console.log("server started on localhost:4000");
+    });
   })();
 
   // promise 를 return 한다.
