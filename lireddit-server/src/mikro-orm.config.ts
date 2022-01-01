@@ -5,7 +5,7 @@ import path from "path";
 import { User } from "./entities/User";
 
 // migrations을 통해 직접 table을 만들게 해주는 설정?
-// MikroORM cli를 통해 테이블 간접 제어?ㅇ
+// MikroORM cli를 통해 테이블 간접 제어?
 const config: Parameters<typeof MikroORM.init>[0] = {
   // 반드시 typeof를 붙여야 한다.
   dbName: "lireddit",

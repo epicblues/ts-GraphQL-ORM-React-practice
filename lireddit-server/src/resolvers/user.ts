@@ -88,7 +88,7 @@ export class UserResolver {
 
   @Mutation(() => UserResponse) // 이 query를 통해 return 할 데이터의 type
   async login(
-    @Ctx() { em }: MyContext,
+    @Ctx() { em, req }: MyContext,
     @Arg("options") { username, password }: UsernamePasswordInput
   ): Promise<UserResponse> {
     // 핵심 : UserResponse 객체를 꼭 new나 constructor를 통해 만들 필요가 없다!!!!!!
@@ -112,6 +112,8 @@ export class UserResolver {
           },
         ],
       };
+    (req.session as any).userId = user.id; // session에 어떤 형태의 데이터든 보관 가능하다.
+
     return {
       user,
     };
