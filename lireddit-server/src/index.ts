@@ -15,16 +15,18 @@ import session from "express-session";
 import connectRedis from "connect-redis";
 import { MyContext } from "./types";
 import { createClient } from "redis";
+import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
 
 try {
   (async () => {
     const orm = await MikroORM.init(microConfig);
     await orm.getMigrator().up();
     const app = express();
-
     // Redis를 활용한 session 저장소
+    // redis 라이브러리 ^3만 지원
     const RedisStore = connectRedis(session);
     const redisClient = createClient();
+
     // 미들 웨어 배치 순서 중요성
     // 먼저 session 미들웨어를 사용했기 때문에 apolloServer를 사용하기 전에 인증을 먼저 한다.
     app.use(
@@ -41,7 +43,7 @@ try {
           sameSite: "lax", // protecting csrf
           secure: __prod__, // cookie only works in https
         },
-        saveUninitialized: false,
+        saveUninitialized: true, // create session by default(even if i didn't store data in it) => by setting false i could save session only when i saved data
         secret: process.env.SESSION_SECRET!,
         resave: false,
       })
@@ -54,6 +56,7 @@ try {
       }),
       context: ({ req, res }): MyContext => ({ em: orm.em, req, res }), // 각 resolver가 db에 실제로 접근하기 위한 연결
       // session에 접근할 수 있게 req,res를 인자로 받는 callback 함수를 설정할 수 있다.
+      plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
     });
 
     await apolloServer.start();
