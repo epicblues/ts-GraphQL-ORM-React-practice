@@ -3,40 +3,35 @@ import { Form, Formik } from 'formik'
 import { Box, Button, FormControl, FormErrorMessage, FormLabel, Input } from '@chakra-ui/react'
 import { Wrapper } from '../components/Wrapper';
 import { InputField } from '../components/InputField';
-import { useMutation } from 'urql'
+import { useRegisterMutation } from '../generated/graphql'
+import { toErrorMap } from '../utils/toErrorMap';
+import { useRouter } from 'next/router';
 
 interface registerProps {
 
 }
 
-// graphql query를 복사, $로 시작하는 것은 변수명으로 parsing 하는 듯
-const REGISTER_MUT = `mutation Register($username: String!, $password: String!) {
-  register(options: { username: $username, password: $password }) {
-    errors {
-      field
-      message
-    }
-    user {
-      id
-    	createdAt
-    }
-  }
-}
-`
-
 const Register: React.FC<registerProps> = ({ }) => {
   // graphql 요청용 라이브러리
   // key value pair를 받아서 $변수명에 값을 대입한다.
-  const [, register] = useMutation(REGISTER_MUT);
-
+  const [, register] = useRegisterMutation();
+  const router = useRouter();
 
   return (
     <Wrapper variant='small'>
       <Formik
-        initialValues={{ username: "", password: "" }}
-        onSubmit={values => {
+        initialValues={{ username: "", password: "", }}
+        onSubmit={async (values, { setErrors, }) => {
           console.log(values);
-          return register(values); // promise 객체를 return 하면 submitting 상태 false로 변화
+          const response = await register(values); // promise 객체를 return 하면 submitting 상태 false로 변화
+          if (response.data?.register.errors) {
+            // Optional Chaining 습관화 => 프로그램이 throw error 하는 것 방지
+
+            setErrors(toErrorMap(response.data.register.errors))
+            // 특정 input에 자동으로 mapping 되게 하는 formik 모듈 전용 에러 처리 함수)
+          } else if (response.data?.register.user) {
+            router.push('/')
+          }
         }}>
         {
           ({ isSubmitting }) => (
