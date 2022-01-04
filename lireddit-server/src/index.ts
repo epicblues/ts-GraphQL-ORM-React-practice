@@ -16,14 +16,21 @@ import connectRedis from "connect-redis";
 import { MyContext } from "./types";
 import { createClient } from "redis";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
+import cors from "cors";
 
 try {
   (async () => {
     const orm = await MikroORM.init(microConfig);
     await orm.getMigrator().up();
     const app = express();
-    // Redis를 활용한 session 저장소
+
+    // cors -> 클라이언트에서 credentials(cookie 등)을 활용하려면
+    // Access-Allow-Control-Origin이 "*" 면 안 된다.
+    // 또한 Access-Allow-Control-Credential이 true여야 한다.
+    app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+
     // redis 라이브러리 ^3만 지원
+    // Redis를 활용한 session 저장소
     const RedisStore = connectRedis(session);
     const redisClient = createClient();
 
@@ -66,7 +73,10 @@ try {
 
       res.send("hello world");
     });
-    apolloServer.applyMiddleware({ app }); // express에 graphql endpoint 생성
+    apolloServer.applyMiddleware({
+      app,
+      cors: false,
+    }); // express에 graphql endpoint 생성
     app.listen(4000, () => {
       console.log("server started on localhost:4000");
     });
