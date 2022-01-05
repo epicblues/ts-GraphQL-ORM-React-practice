@@ -4,26 +4,18 @@ import {
   Arg,
   Ctx,
   Field,
-  InputType,
   Mutation,
   ObjectType,
   Query,
   Resolver,
 } from "type-graphql";
 import { hashSync, compareSync } from "bcrypt";
-import { EntityManager } from "@mikro-orm/mysql";
-import { COOKIE_NAME } from "../constants";
-
 // MikroOrm의 em이 정상적으로 사용되지 못할 경우
 // 직접 querybuilder를 사용해서 query를 만들어야 한다.(knex 사용)
-
-@InputType() // 한 arg에 여러 필드를 넣을 수 있다.
-class UsernamePasswordInput {
-  @Field()
-  username: string;
-  @Field()
-  password: string;
-}
+import { EntityManager } from "@mikro-orm/mysql";
+import { COOKIE_NAME } from "../constants";
+import { UsernamePasswordInput } from "./UsernamePasswordInput";
+import { validateRegister } from "../utils/validateRegister";
 
 @ObjectType()
 class FieldError {
@@ -46,6 +38,15 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+  @Mutation(() => Boolean)
+  async forgotPassword(
+    @Ctx() { em }: MyContext,
+    @Arg("email") email: string
+  ): Promise<boolean> {
+    const user = await em.findOne(User, { email });
+    return !!user;
+  }
+
   // 내가 로그인 한 상태인지 확인하는 query
   @Query(() => User, { nullable: true })
   async me(@Ctx() { req, em }: MyContext): Promise<User | null> {
@@ -61,30 +62,21 @@ export class UserResolver {
   @Mutation(() => UserResponse) // 이 query를 통해 return 할 데이터의 type
   async register(
     @Ctx() { em, req }: MyContext,
-    @Arg("options") { username, password }: UsernamePasswordInput
+    @Arg("options")
+    options: UsernamePasswordInput
   ): Promise<UserResponse> {
     // 사용자들에게 보여줄 error와 개발자가 확인할 error를 구분해아 한다.
-    if (username.length <= 2)
-      return {
-        errors: [
-          {
-            field: "username",
-            message: "length must be greater than 2",
-          },
-        ],
-      };
+    const errors = validateRegister(options);
+    // refactoring 이유 : 내가 UserResponse 형태를 바꾸어도 validateRegister 코드를 수정할 필요는 없다.
+    // 수정은 여기에서 끝낸다.
+    if (errors) return { errors };
 
-    if (password.length <= 3)
-      return {
-        errors: [
-          {
-            field: "password",
-            message: "length must be greater than 3",
-          },
-        ],
-      };
-    const hashedPassword = hashSync(password, 10);
-    const user = em.create(User, { username, password: hashedPassword });
+    const hashedPassword = hashSync(options.password, 10);
+    const user = em.create(User, {
+      username: options.username,
+      password: hashedPassword,
+      email: options.email,
+    });
     try {
       // await em.persistAndFlush(user);
       // 회원 가입이 성공했을 경우 자동 로그인
@@ -95,10 +87,11 @@ export class UserResolver {
       const [id] = await (em as EntityManager)
         .createQueryBuilder(User)
         .insert({
-          username,
+          username: options.username,
           password: hashedPassword,
           created_at: new Date(), // 실제 db에 들어가는 형태로 작성해야 함
           updated_at: new Date(), // camelCase가 아니다!
+          email: options.email,
         })
         .getKnexQuery(); // 쿼리가 성공할 경우 첫 번째 배열에 id를 return 한다.
       // .returning("*"); mysql에서는 통하지 않는다.
@@ -126,16 +119,25 @@ export class UserResolver {
   @Mutation(() => UserResponse) // 이 query를 통해 return 할 데이터의 type
   async login(
     @Ctx() { em, req }: MyContext,
-    @Arg("options") { username, password }: UsernamePasswordInput
+    @Arg("usernameOrEmail") usernameOrEmail: string,
+    @Arg("password") password: string
   ): Promise<UserResponse> {
     // 핵심 : UserResponse 객체를 꼭 new나 constructor를 통해 만들 필요가 없다!!!!!!
-    const user = await em.findOne(User, { username });
+
+    const isEmail = usernameOrEmail.includes("@");
+
+    const user = await em.findOne(
+      User,
+      isEmail // @가 있으면 이메일, 없으면 username이라 간주
+        ? { email: usernameOrEmail }
+        : { username: usernameOrEmail }
+    );
     if (!user) {
       return {
         errors: [
           {
-            field: "username",
-            message: "that username doesn't exist",
+            field: "usernameOrEmail",
+            message: `that ${isEmail ? "email" : "username"} doesn't exist`,
           },
         ],
       };

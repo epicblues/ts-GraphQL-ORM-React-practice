@@ -22,10 +22,10 @@ const Register: React.FC<registerProps> = ({ }) => {
   return (
     <Wrapper variant='small'>
       <Formik
-        initialValues={{ username: "", password: "", }}
+        initialValues={{ username: "", password: "", email: "" }}
         onSubmit={async (values, { setErrors, }) => {
           console.log(values);
-          const response = await register(values); // promise 객체를 return 하면 submitting 상태 false로 변화
+          const response = await register({ options: values }); // promise 객체를 return 하면 submitting 상태 false로 변화
           if (response.data?.register.errors) {
             // Optional Chaining 습관화 => 프로그램이 throw error 하는 것 방지
 
@@ -39,6 +39,9 @@ const Register: React.FC<registerProps> = ({ }) => {
           ({ isSubmitting }) => (
             <Form>
               <InputField name="username" placeholder="username" label='Username' />
+              <Box mt={4}>
+                <InputField name="email" placeholder="email" label='email' type="email" />
+              </Box>
               <Box mt={4}>
                 <InputField name="password" placeholder="password" label='Password' type='password' />
               </Box>

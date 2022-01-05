@@ -17,8 +17,12 @@ export class User {
   updatedAt = new Date();
 
   @Field(() => String)
-  @Property({ unique: true, length: 30, type: "string" }) // mysql 의 제한으로 unique 속성을 추가할 때는 총 길이를 제한해야 한다.
+  @Property({ unique: true, length: 30, type: "string" })
   username!: string;
+
+  @Field(() => String)
+  @Property({ type: "string", unique: true })
+  email!: string;
 
   @Property({ type: "string" }) // @Field Decorator 사용 x; 노출시킬 필요가 없다.
   password!: string;

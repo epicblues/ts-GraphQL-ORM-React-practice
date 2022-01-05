@@ -78,7 +78,7 @@ export const createUrqlClient = (ssrExchange: any) => ({
         },
       },
     }),
-    ssrExchange,
+    ssrExchange, // nextjs 전용
     fetchExchange,
   ],
 });

@@ -23,10 +23,9 @@ const Login: React.FC<LoginProps> = ({ }) => {
   return (
     <Wrapper variant='small'>
       <Formik
-        initialValues={{ username: "", password: "", }}
+        initialValues={{ usernameOrEmail: "", password: "", }}
         onSubmit={async (values, { setErrors, }) => {
-          console.log(values);
-          const response = await login({ options: values });
+          const response = await login(values);
           if (response.data?.login.errors) {
             // Optional Chaining 습관화 => 프로그램이 throw error 하는 것 방지
 
@@ -39,7 +38,7 @@ const Login: React.FC<LoginProps> = ({ }) => {
         {
           ({ isSubmitting }) => (
             <Form>
-              <InputField name="username" placeholder="username" label='Username' />
+              <InputField name="usernameOrEmail" placeholder="username or email" label='Username Or Email' />
               <Box mt={4}>
                 <InputField name="password" placeholder="password" label='Password' type='password' />
               </Box>
