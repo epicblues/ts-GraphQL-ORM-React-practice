@@ -5,7 +5,7 @@ import { Arg, Ctx, Int, Mutation, Query, Resolver } from "type-graphql";
 @Resolver()
 export class PostResolver {
   @Query(() => [Post]) // 이 query를 통해 return 할 데이터의 type
-  posts(@Ctx() { em }: MyContext) {
+  async posts(@Ctx() { em }: MyContext) {
     // apolloServer 인스턴스를 생성할 때 context 옵션에 넣은 객체를 사용할 수 있다.
     return em.find(Post, {});
   }
