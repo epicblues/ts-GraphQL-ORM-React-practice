@@ -3,7 +3,7 @@ import { Cache, cacheExchange, QueryInput, } from '@urql/exchange-graphcache'
 import { NextComponentType, NextPageContext } from 'next'
 // graphql 관련 요청/응답을 쉽게 도와주는 라이브러리
 import { Provider, createClient, dedupExchange, fetchExchange, } from 'urql'
-import { LoginMutation, MeDocument, MeQuery, RegisterMutation, } from '../generated/graphql'
+import { LoginMutation, LogoutMutation, MeDocument, MeQuery, RegisterMutation, } from '../generated/graphql'
 import theme from '../theme'
 
 
@@ -68,7 +68,24 @@ const client = createClient({
 
             }
           )
+        },
+        logout: (_result, args, cache, info) => {
+          betterUpdateQuery<LogoutMutation, MeQuery>(
+            cache,
+            { query: MeDocument },
+            _result,
+            (result, query) => {
+
+              if (result.logout.valueOf()) {
+                return {
+                  me: null
+                }
+              }
+              return query
+            }
+          )
         }
+
       }
     }
   }), fetchExchange]

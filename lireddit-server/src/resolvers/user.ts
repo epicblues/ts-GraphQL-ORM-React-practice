@@ -12,6 +12,8 @@ import {
 } from "type-graphql";
 import { hashSync, compareSync } from "bcrypt";
 import { EntityManager } from "@mikro-orm/mysql";
+import { COOKIE_NAME } from "../constants";
+
 // MikroOrm의 em이 정상적으로 사용되지 못할 경우
 // 직접 querybuilder를 사용해서 query를 만들어야 한다.(knex 사용)
 
@@ -168,5 +170,25 @@ export class UserResolver {
     return {
       user,
     };
+  }
+
+  @Mutation(() => Boolean)
+  async logout(@Ctx() { req, res }: MyContext): Promise<boolean> {
+    // redis에 저장된 세션 정보 제거
+    // redis 서버에 삭제 요청을 하기 때문에 callback 형태로 구성된 것 같다.
+
+    return await new Promise((resolve) =>
+      req.session.destroy((err) => {
+        if (err) {
+          console.log(err);
+          resolve(false);
+          return;
+        }
+        res.clearCookie(COOKIE_NAME);
+        // 해당 key에 해당하는 쿠키 value 제거
+        resolve(true);
+      })
+    );
+    // 기존에 했던 것보다 훨씬 더 간단한 형태의 Promisify
   }
 }

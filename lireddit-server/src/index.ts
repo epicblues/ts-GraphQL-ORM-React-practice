@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import "reflect-metadata";
 import { MikroORM } from "@mikro-orm/core";
-import { __prod__ } from "./constants";
+import { COOKIE_NAME, __prod__ } from "./constants";
 import microConfig from "./mikro-orm.config";
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
@@ -38,7 +38,7 @@ try {
     // 먼저 session 미들웨어를 사용했기 때문에 apolloServer를 사용하기 전에 인증을 먼저 한다.
     app.use(
       session({
-        name: "qid", // 브라우저에 저장될 쿠키 key 이름
+        name: COOKIE_NAME, // 브라우저에 저장될 쿠키 key 이름
         store: new RedisStore({
           client: redisClient,
           disableTouch: true, // 해당 session을 가진 사용자가 활동을 할 때마다 TTL을 갱신할 것인가.
