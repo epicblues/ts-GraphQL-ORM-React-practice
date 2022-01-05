@@ -13,9 +13,12 @@ import { hashSync, compareSync } from "bcrypt";
 // MikroOrm의 em이 정상적으로 사용되지 못할 경우
 // 직접 querybuilder를 사용해서 query를 만들어야 한다.(knex 사용)
 import { EntityManager } from "@mikro-orm/mysql";
-import { COOKIE_NAME } from "../constants";
+import { COOKIE_NAME, FORGET_PASSWORD_PREFIX } from "../constants";
 import { UsernamePasswordInput } from "./UsernamePasswordInput";
 import { validateRegister } from "../utils/validateRegister";
+import { sendEmail } from "../utils/sendEmail";
+// version 4 UUID를 생성하는 메서드
+import { v4 } from "uuid";
 
 @ObjectType()
 class FieldError {
@@ -38,12 +41,90 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+  @Mutation(() => UserResponse)
+  async changePassword(
+    @Ctx() { em, redis }: MyContext,
+    @Arg("token") token: string,
+    @Arg("newPassword") newPassword: string
+  ): Promise<UserResponse> {
+    if (newPassword.length <= 3)
+      return {
+        errors: [
+          {
+            field: "newPassword",
+            message: "length must be greater than 3",
+          },
+        ],
+      };
+    const userId = await redis.get(FORGET_PASSWORD_PREFIX + token);
+    if (!userId)
+      return {
+        errors: [
+          {
+            field: "token",
+            message: "token expired",
+          },
+        ],
+      };
+    try {
+      const user = await em.findOne(User, { id: +userId });
+      if (!user)
+        return {
+          errors: [
+            {
+              field: "token",
+              message: "user no longer exists",
+            },
+          ],
+        };
+
+      user.password = hashSync(newPassword, 10);
+      // db에서 user를 받아오고 서버에서 수정한 다음에
+      // 그 수정한 entity를 db에 반영하는 방식? (즉 db에서 update query를 수행하는 것이 아니다)
+      await em.persistAndFlush(user);
+      return {
+        user,
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        errors: [
+          {
+            field: "newPassword",
+            message: "update failed",
+          },
+        ],
+      };
+    }
+  }
+
   @Mutation(() => Boolean)
   async forgotPassword(
-    @Ctx() { em }: MyContext,
+    @Ctx() { em, redis }: MyContext,
     @Arg("email") email: string
   ): Promise<boolean> {
+    // 먼저 해당 이메일을 가진 사용자가 있는지 확인한다.
     const user = await em.findOne(User, { email });
+    if (!user) {
+      // 이메일이 db에 없다.
+      return true; // 이메일이 db에 없다는 사실을 알리고 싶지 않을 때(보안)
+    }
+
+    // 사용자가 맞을 경우 그 사용자에게 이메일을 보낸다.
+    // 그 사용자가 맞다는 token을 생성하고 redis에 저장한다.
+    const token = v4();
+    await redis.set(
+      FORGET_PASSWORD_PREFIX + token,
+      user.id,
+      "ex",
+      1000 * 60 * 60 * 24 * 3 // 3일 동안 유지 되는 비밀번호 변경 토큰
+    );
+
+    // 해당 token이 담긴 link를 이메일로 보낸다.
+    await sendEmail(
+      email,
+      `<a href="http://localhost:3000/change-password/${token}">reset password</a>`
+    );
     return !!user;
   }
 

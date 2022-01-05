@@ -14,7 +14,7 @@ import { UserResolver } from "./resolvers/user";
 import session from "express-session";
 import connectRedis from "connect-redis";
 import { MyContext } from "./types";
-import { createClient } from "redis";
+import Redis from "ioredis";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
 import cors from "cors";
 
@@ -32,7 +32,7 @@ try {
     // redis 라이브러리 ^3만 지원
     // Redis를 활용한 session 저장소
     const RedisStore = connectRedis(session);
-    const redisClient = createClient();
+    const redis = new Redis();
 
     // 미들 웨어 배치 순서 중요성
     // 먼저 session 미들웨어를 사용했기 때문에 apolloServer를 사용하기 전에 인증을 먼저 한다.
@@ -40,7 +40,7 @@ try {
       session({
         name: COOKIE_NAME, // 브라우저에 저장될 쿠키 key 이름
         store: new RedisStore({
-          client: redisClient,
+          client: redis,
           disableTouch: true, // 해당 session을 가진 사용자가 활동을 할 때마다 TTL을 갱신할 것인가.
           disableTTL: true, // session 유효 기간 설정(disable로 할 경우 session이 영원히 유지된다.)
         }), // session 저장을 redis에 설정한다.
@@ -61,7 +61,7 @@ try {
         resolvers: [HelloResolver, PostResolver, UserResolver],
         validate: false,
       }),
-      context: ({ req, res }): MyContext => ({ em: orm.em, req, res }), // 각 resolver가 db에 실제로 접근하기 위한 연결
+      context: ({ req, res }): MyContext => ({ em: orm.em, req, res, redis }), // 각 resolver가 db에 실제로 접근하기 위한 연결
       // session에 접근할 수 있게 req,res를 인자로 받는 callback 함수를 설정할 수 있다.
       plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
     });
