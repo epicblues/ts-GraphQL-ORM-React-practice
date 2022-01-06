@@ -3,10 +3,12 @@ import {
   BaseEntity,
   Column,
   CreateDateColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
 import { Entity } from "typeorm/decorator/entity/Entity";
+import { User } from "./User";
 
 @ObjectType() // stacked Decorator - class 이므로 type-graphql에서 사용하는 type으로도 간주 가능
 @Entity()
@@ -20,14 +22,31 @@ export class Post extends BaseEntity {
   // non-null/non-undefined operator
 
   @Field(() => String)
+  @Column()
+  title!: string;
+
+  @Field(() => String)
+  @Column()
+  text!: string;
+
+  @Field(() => Int)
+  @Column({ type: "int", default: 0 })
+  points!: number;
+
+  @Field(() => Int)
+  @Column()
+  creatorId: number;
+
+  // database에 user.id와 연결된 foreign key 설정
+  // graphql에 직접적으로 노출할 필요가 없으므로 field decorator X
+  @ManyToOne(() => User, (user) => user.posts)
+  originalPoster: User;
+
+  @Field(() => String)
   @CreateDateColumn() // 생성된 시점을 날짜로 저장해주는 typeORM의 decorator
   createdAt: Date; // 필드 기본 값을 설정할 필요가 없어졌다.
 
   @Field(() => String)
   @UpdateDateColumn() // 갱신된 시점을 날짜로 저장해주는 typeORM의 decorator
   updatedAt: Date;
-
-  @Field(() => String)
-  @Column()
-  title!: string;
 }

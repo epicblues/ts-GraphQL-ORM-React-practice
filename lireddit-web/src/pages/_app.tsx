@@ -13,6 +13,8 @@ function MyApp({ Component, pageProps }: { Component: NextComponentType, pagePro
         }}
       >
         <Component {...pageProps} />
+
+
       </ColorModeProvider>
     </ChakraProvider>
 

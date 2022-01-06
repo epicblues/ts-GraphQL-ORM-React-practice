@@ -62,7 +62,8 @@ export const NavBar: React.FC<NavBarProps> = ({ }) => {
 
 
   return (
-    <Flex p={4} bg="tan">
+    <Flex p={4} bg="tan" position="sticky" top={0} zIndex={1}>
+      {/* sticky => 스크롤 상관 없이 해당 위치 유지, fixed 유사? */}
       <Box ml={"auto"}>
         {body}
       </Box>

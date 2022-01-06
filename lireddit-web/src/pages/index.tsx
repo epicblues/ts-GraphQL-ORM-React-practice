@@ -1,7 +1,10 @@
+import { Link } from '@chakra-ui/react';
 import { withUrqlClient } from 'next-urql';
+import { Layout } from '../components/Layout';
 import { NavBar } from '../components/NavBar';
 import { usePostsQuery } from '../generated/graphql';
 import { createUrqlClient } from '../utils/createUrqlClient';
+import NextLink from 'next/link'
 
 
 const Index = () => {
@@ -9,12 +12,14 @@ const Index = () => {
   // SSR을 true로 해 놓을 경우 fetching이 false로 될 때 까지 페이지 응답을 보내지 않는다.
 
   return (
-    <>
-      <NavBar />
+    <Layout variant='regular'>
+      <NextLink href="/create-post">
+        <Link>Create Post</Link>
+      </NextLink>
       <div>Hello World</div>
       <br />
       {data ? data.posts.map(p => <div key={p.id}>{p.title}</div>) : <div>Loading</div>}
-    </>);
+    </Layout>);
 
 }
 export default withUrqlClient(createUrqlClient, { ssr: true })(Index);

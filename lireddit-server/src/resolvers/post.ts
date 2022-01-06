@@ -1,5 +1,37 @@
-import { Arg, Int, Mutation, Query, Resolver } from "type-graphql";
+import { isAuth } from "../middleware/isAuth";
+import { MyContext } from "../types";
+import {
+  Arg,
+  Ctx,
+  Field,
+  InputType,
+  Int,
+  Mutation,
+  ObjectType,
+  Query,
+  Resolver,
+  UseMiddleware,
+} from "type-graphql";
 import { Post } from "../entities/Post";
+import { FieldError } from "./FieldError";
+
+@InputType()
+class PostInput {
+  @Field(() => String!)
+  title: string;
+
+  @Field(() => String!)
+  text: string;
+}
+
+@ObjectType()
+class PostResponse {
+  @Field(() => [FieldError], { nullable: true })
+  errors?: FieldError[];
+
+  @Field(() => Post, { nullable: true })
+  post?: Post;
+}
 
 @Resolver()
 export class PostResolver {
@@ -15,15 +47,35 @@ export class PostResolver {
     return Post.findOne(id);
   }
 
-  @Mutation(() => Post) // 데이터를 변경(C,U,D)를 할 때 사용하는 decorator
-  async createPost(@Arg("title") title: string): Promise<Post> {
-    const newPost = await Post.create({ title }).save(); //의entity를 생성하고 save를 통해 db에 질의
+  @Mutation(() => PostResponse) // 데이터를 변경(C,U,D)를 할 때 사용하는 decorator
+  @UseMiddleware(isAuth) // resolver로 context가 가기 전에 먼저 확인하는 middleware 장착 가능
+  async createPost(
+    @Arg("input") input: PostInput,
+    @Ctx() { req }: MyContext
+  ): Promise<PostResponse> {
+    if (input.text.length <= 2) {
+      return {
+        errors: [{ field: "text", message: "text is too short" }],
+      };
+    }
+
+    if (input.title.length <= 2) {
+      return {
+        errors: [{ field: "title", message: "title is too short" }],
+      };
+    }
+    const newPost = await Post.create({
+      ...input,
+      creatorId: req.session.userId,
+    }).save(); //entity를 생성하고 save를 통해 db에 질의
     // 사실상 2 SQL : insert / select -> 비효율을 유발할 수 있다.
     // returning을 지원하는 db에서는 한 쿼리로 실행하므로 계속 사용?
-    return newPost;
+
+    return { post: newPost };
   }
 
   @Mutation(() => Post, { nullable: true })
+  @UseMiddleware(isAuth)
   async updatePost(
     @Arg("title", () => String, { nullable: true }) title: string,
     @Arg("id") id: number
@@ -40,6 +92,7 @@ export class PostResolver {
     return post;
   }
   @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
   async deletePost(
     @Arg("title", () => String, { nullable: true }) title?: string,
     @Arg("id", () => Int, { nullable: true }) id?: number

@@ -40,7 +40,7 @@ try {
     // redis 라이브러리 ^3만 지원
     // Redis를 활용한 session 저장소
     const RedisStore = connectRedis(session);
-    const redis = new Redis();
+    const redis = new Redis(); // redis와 연결하는 redisIo 클라이언트
 
     // 미들 웨어 배치 순서 중요성
     // 먼저 session 미들웨어를 사용했기 때문에 apolloServer를 사용하기 전에 인증을 먼저 한다.

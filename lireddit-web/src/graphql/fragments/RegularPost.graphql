@@ -1,5 +1,9 @@
 fragment RegularPost on Post {
   id
   title
+  text
+  creatorId
   createdAt
+  updatedAt
+  points
 }

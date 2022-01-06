@@ -1,11 +1,18 @@
 import { cacheExchange } from "@urql/exchange-graphcache";
-import { dedupExchange, fetchExchange } from "urql";
+import Router from "next/router";
+import {
+  CombinedError,
+  dedupExchange,
+  errorExchange,
+  fetchExchange,
+  Operation,
+} from "urql";
 import {
   LoginMutation,
-  MeQuery,
-  MeDocument,
-  RegisterMutation,
   LogoutMutation,
+  MeDocument,
+  MeQuery,
+  RegisterMutation,
 } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
 
@@ -79,6 +86,15 @@ export const createUrqlClient = (ssrExchange: any) => ({
       },
     }),
     ssrExchange, // nextjs 전용
+    errorExchange({
+      // graphql로 발생한 Error handling
+      onError: (error: CombinedError, operation: Operation) => {
+        if (error.message.includes("not authenticated")) {
+          // hooks가 아닌 전역 next router
+          Router.replace("/login");
+        }
+      },
+    }),
     fetchExchange,
   ],
 });

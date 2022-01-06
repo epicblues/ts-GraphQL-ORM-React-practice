@@ -19,15 +19,7 @@ import { sendEmail } from "../utils/sendEmail";
 // version 4 UUID를 생성하는 메서드
 import { v4 } from "uuid";
 import { getConnection } from "typeorm";
-
-@ObjectType()
-class FieldError {
-  @Field()
-  field: string;
-  // 어느 필드에 에러가 있는가
-  @Field()
-  message: string;
-}
+import { FieldError } from "./FieldError";
 
 @ObjectType() // graphql에서 활용할 수 있게 만드는 decorator
 class UserResponse {
