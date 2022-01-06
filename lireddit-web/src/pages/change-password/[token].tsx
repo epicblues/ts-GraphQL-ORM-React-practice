@@ -1,20 +1,20 @@
-import { Box, Button } from '@chakra-ui/react';
+import { Box, Button, Flex, Link } from '@chakra-ui/react';
 import { Formik, Form } from 'formik';
 import { NextPage } from 'next';
 import { withUrqlClient } from 'next-urql';
 import router, { useRouter } from 'next/router';
-import react from 'react'
+import react, { useState } from 'react'
 import { InputField } from '../../components/InputField';
 import { Wrapper } from '../../components/Wrapper';
 import { useChangePasswordMutation } from '../../generated/graphql';
 import { createUrqlClient } from '../../utils/createUrqlClient';
 import { toErrorMap } from '../../utils/toErrorMap';
-import register from '../register';
-
+import NextLink from 'next/link'
 
 
 const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
   const [, changePassword] = useChangePasswordMutation()
+  const [tokenError, setTokenError] = useState('');
   const router = useRouter()
   return (
 
@@ -28,19 +28,14 @@ const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
             return;
           }
           if (result.data?.changePassword.errors) {
-            setErrors(toErrorMap(result.data.changePassword.errors));
-            return;
+            const errorMap = toErrorMap(result.data.changePassword.errors);
+            if ('token' in errorMap) {
+              // errorMap 객체에 'token' property가 존재할 때
+              setTokenError(errorMap.token);
+            }
+            setErrors(errorMap);
           }
 
-          // const response = await register({ options: values }); // promise 객체를 return 하면 submitting 상태 false로 변화
-          // if (response.data?.register.errors) {
-          //   // Optional Chaining 습관화 => 프로그램이 throw error 하는 것 방지
-
-          //   setErrors(toErrorMap(response.data.register.errors))
-          //   // 특정 input에 자동으로 mapping 되게 하는 formik 모듈 전용 에러 처리 함수)
-          // } else if (response.data?.register.user) {
-          //   router.push('/')
-          // }
         }}>
         {
           ({ isSubmitting }) => (
@@ -49,6 +44,15 @@ const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
               <Box mt={4}>
                 <InputField name="newPassword" placeholder="new password" label='New Password' type='password' />
               </Box>
+              {tokenError && (
+                <Flex color="red">
+                  {tokenError}
+
+                  <NextLink href="/forgot-password">
+                    <Link ml={4}>Click here to get a new one</Link>
+                  </NextLink>
+
+                </Flex>)}
               <Button mt={4} type="submit" bgColor={"teal"} color="white" isLoading={isSubmitting} >change password</Button>
             </Form>
           )

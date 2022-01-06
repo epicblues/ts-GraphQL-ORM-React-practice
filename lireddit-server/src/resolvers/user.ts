@@ -56,7 +56,8 @@ export class UserResolver {
           },
         ],
       };
-    const userId = await redis.get(FORGET_PASSWORD_PREFIX + token);
+    const key = FORGET_PASSWORD_PREFIX + token;
+    const userId = await redis.get(key);
     if (!userId)
       return {
         errors: [
@@ -82,6 +83,8 @@ export class UserResolver {
       // db에서 user를 받아오고 서버에서 수정한 다음에
       // 그 수정한 entity를 db에 반영하는 방식? (즉 db에서 update query를 수행하는 것이 아니다)
       await em.persistAndFlush(user);
+      // 더 이상 token이 유효하지 않게 db에서 삭제
+      await redis.del(key);
       return {
         user,
       };
