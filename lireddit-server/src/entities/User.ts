@@ -1,29 +1,36 @@
-import { Entity, PrimaryKey, Property } from "@mikro-orm/core";
 import { Field, Int, ObjectType } from "type-graphql";
+import {
+  BaseEntity,
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from "typeorm";
 
 @ObjectType()
 @Entity()
-export class User {
+export class User extends BaseEntity {
   @Field(() => Int)
-  @PrimaryKey()
+  @PrimaryGeneratedColumn()
   id!: number;
 
   @Field(() => String)
-  @Property({ type: "date" })
-  createdAt = new Date();
+  @CreateDateColumn()
+  createdAt: Date;
 
   @Field(() => String)
-  @Property({ type: "date", onUpdate: () => new Date() })
-  updatedAt = new Date();
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   @Field(() => String)
-  @Property({ unique: true, length: 30, type: "string" })
+  @Column({ unique: true }) // type을 입력하지 않으면 기본적으로 text 형태로 저장
   username!: string;
 
   @Field(() => String)
-  @Property({ type: "string", unique: true })
+  @Column({ unique: true })
   email!: string;
 
-  @Property({ type: "string" }) // @Field Decorator 사용 x; 노출시킬 필요가 없다.
+  @Column() // @Field Decorator 사용 x; 노출시킬 필요가 없다.
   password!: string;
 }

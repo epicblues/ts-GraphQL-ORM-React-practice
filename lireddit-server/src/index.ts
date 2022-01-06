@@ -1,9 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import "reflect-metadata";
-import { MikroORM } from "@mikro-orm/core";
 import { COOKIE_NAME, __prod__ } from "./constants";
-import microConfig from "./mikro-orm.config";
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
 import { buildSchema } from "type-graphql";
@@ -17,11 +15,21 @@ import { MyContext } from "./types";
 import Redis from "ioredis";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
 import cors from "cors";
+import { createConnection } from "typeorm";
+import { User } from "./entities/User";
+import { Post } from "./entities/Post";
 
 try {
   (async () => {
-    const orm = await MikroORM.init(microConfig);
-    await orm.getMigrator().up();
+    await createConnection({
+      type: "mysql",
+      database: "lireddit2",
+      username: process.env.DB_USER as string,
+      password: process.env.DB_PASSWORD as string,
+      logging: true,
+      synchronize: true, // migration 없이 애플리케이션의 entity를 db와 동기화
+      entities: [Post, User],
+    });
     const app = express();
 
     // cors -> 클라이언트에서 credentials(cookie 등)을 활용하려면
@@ -61,7 +69,7 @@ try {
         resolvers: [HelloResolver, PostResolver, UserResolver],
         validate: false,
       }),
-      context: ({ req, res }): MyContext => ({ em: orm.em, req, res, redis }), // 각 resolver가 db에 실제로 접근하기 위한 연결
+      context: ({ req, res }): MyContext => ({ req, res, redis }), // 각 resolver가 db에 실제로 접근하기 위한 연결
       // session에 접근할 수 있게 req,res를 인자로 받는 callback 함수를 설정할 수 있다.
       plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
     });

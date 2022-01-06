@@ -12,13 +12,13 @@ import {
 import { hashSync, compareSync } from "bcrypt";
 // MikroOrm의 em이 정상적으로 사용되지 못할 경우
 // 직접 querybuilder를 사용해서 query를 만들어야 한다.(knex 사용)
-import { EntityManager } from "@mikro-orm/mysql";
 import { COOKIE_NAME, FORGET_PASSWORD_PREFIX } from "../constants";
 import { UsernamePasswordInput } from "./UsernamePasswordInput";
 import { validateRegister } from "../utils/validateRegister";
 import { sendEmail } from "../utils/sendEmail";
 // version 4 UUID를 생성하는 메서드
 import { v4 } from "uuid";
+import { getConnection } from "typeorm";
 
 @ObjectType()
 class FieldError {
@@ -43,7 +43,7 @@ class UserResponse {
 export class UserResolver {
   @Mutation(() => UserResponse)
   async changePassword(
-    @Ctx() { em, redis }: MyContext,
+    @Ctx() { redis }: MyContext,
     @Arg("token") token: string,
     @Arg("newPassword") newPassword: string
   ): Promise<UserResponse> {
@@ -68,7 +68,7 @@ export class UserResolver {
         ],
       };
     try {
-      const user = await em.findOne(User, { id: +userId });
+      const user = await User.findOne({ id: +userId });
       if (!user)
         return {
           errors: [
@@ -79,10 +79,12 @@ export class UserResolver {
           ],
         };
 
-      user.password = hashSync(newPassword, 10);
       // db에서 user를 받아오고 서버에서 수정한 다음에
       // 그 수정한 entity를 db에 반영하는 방식? (즉 db에서 update query를 수행하는 것이 아니다)
-      await em.persistAndFlush(user);
+      await User.update(
+        { id: user.id },
+        { password: hashSync(newPassword, 10) }
+      );
       // 더 이상 token이 유효하지 않게 db에서 삭제
       await redis.del(key);
       return {
@@ -103,11 +105,11 @@ export class UserResolver {
 
   @Mutation(() => Boolean)
   async forgotPassword(
-    @Ctx() { em, redis }: MyContext,
+    @Ctx() { redis }: MyContext,
     @Arg("email") email: string
   ): Promise<boolean> {
     // 먼저 해당 이메일을 가진 사용자가 있는지 확인한다.
-    const user = await em.findOne(User, { email });
+    const user = await User.findOne({ email });
     if (!user) {
       // 이메일이 db에 없다.
       return true; // 이메일이 db에 없다는 사실을 알리고 싶지 않을 때(보안)
@@ -133,19 +135,17 @@ export class UserResolver {
 
   // 내가 로그인 한 상태인지 확인하는 query
   @Query(() => User, { nullable: true })
-  async me(@Ctx() { req, em }: MyContext): Promise<User | null> {
+  async me(@Ctx() { req }: MyContext): Promise<User | undefined> {
     if (!req.session.userId) {
-      return null;
+      return undefined;
     }
 
-    const user = await em.findOne(User, { id: req.session.userId });
-
-    return user;
+    return await User.findOne({ id: req.session.userId });
   }
 
   @Mutation(() => UserResponse) // 이 query를 통해 return 할 데이터의 type
   async register(
-    @Ctx() { em, req }: MyContext,
+    @Ctx() { req }: MyContext,
     @Arg("options")
     options: UsernamePasswordInput
   ): Promise<UserResponse> {
@@ -156,32 +156,21 @@ export class UserResolver {
     if (errors) return { errors };
 
     const hashedPassword = hashSync(options.password, 10);
-    const user = em.create(User, {
-      username: options.username,
-      password: hashedPassword,
-      email: options.email,
-    });
+    const results = await getConnection() // 전역적으로 설정된 connection을 가져온다.
+      .createQueryBuilder()
+      .insert()
+      .into(User)
+      .values({
+        username: options.username,
+        password: hashedPassword,
+        email: options.email,
+      })
+      .execute(); // cf) 다른 db에서는 returning 메서드를 통해 삽입된 레코드 결과를 가져올 수 있다.
+    const user = await User.findOne(results.generatedMaps[0].id as number);
+
+    console.log(results);
     try {
-      // await em.persistAndFlush(user);
-      // 회원 가입이 성공했을 경우 자동 로그인
-      // session에 데이터를 넣는 순간
-      // express-session은 response에 set-cookies 헤더에 데이터를 입력한다
-
-      // em이 제대로 동작하지 않을 경우 knex query로 수동 쿼리 생성
-      const [id] = await (em as EntityManager)
-        .createQueryBuilder(User)
-        .insert({
-          username: options.username,
-          password: hashedPassword,
-          created_at: new Date(), // 실제 db에 들어가는 형태로 작성해야 함
-          updated_at: new Date(), // camelCase가 아니다!
-          email: options.email,
-        })
-        .getKnexQuery(); // 쿼리가 성공할 경우 첫 번째 배열에 id를 return 한다.
-      // .returning("*"); mysql에서는 통하지 않는다.
-
-      req.session.userId = id;
-      user.id = id;
+      req.session.userId = user!.id;
 
       return {
         user,
@@ -202,7 +191,7 @@ export class UserResolver {
 
   @Mutation(() => UserResponse) // 이 query를 통해 return 할 데이터의 type
   async login(
-    @Ctx() { em, req }: MyContext,
+    @Ctx() { req }: MyContext,
     @Arg("usernameOrEmail") usernameOrEmail: string,
     @Arg("password") password: string
   ): Promise<UserResponse> {
@@ -210,8 +199,7 @@ export class UserResolver {
 
     const isEmail = usernameOrEmail.includes("@");
 
-    const user = await em.findOne(
-      User,
+    const user = await User.findOne(
       isEmail // @가 있으면 이메일, 없으면 username이라 간주
         ? { email: usernameOrEmail }
         : { username: usernameOrEmail }
