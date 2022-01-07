@@ -14,6 +14,7 @@ import {
   LogoutMutation,
   MeDocument,
   MeQuery,
+  PaginatedPosts,
   PostsDocument,
   PostsQuery,
   RegisterMutation,
@@ -25,6 +26,7 @@ const cursorPagination = (): Resolver => {
   return (_parent, fieldArgs, cache, info) => {
     const { parentKey: entityKey, fieldName } = info;
     // 'Query', 'posts'
+
     const allFields = cache.inspectFields(entityKey);
     // 프로젝트가 커지면 다양한 query가 들어온다.
     console.log(allFields);
@@ -35,23 +37,28 @@ const cursorPagination = (): Resolver => {
       return undefined;
     }
     console.log(fieldArgs); // 실행되서 이 함수를 호출한 필드의 인자 {limit : 10}
-    const fieldKey = `${fieldName}(${stringifyVariables(fieldArgs)})`;
-    console.log(fieldKey);
 
-    const isItInTheCache = cache.resolve(entityKey, fieldKey) as string[];
-    console.log(isItInTheCache);
-    // 캐시 되어 있지 않으면 해당 키에 맞게 다시 graphql request를 보낸다.
     info.partial = true;
 
-    const results: string[] = [];
+    let hasMore = true;
+    const data: string[] = [];
     fieldInfos.forEach((fi) => {
       //fi.fieldKey = posts({"limit":10})
-      const data = cache.resolve(entityKey, fi.fieldKey) as string[];
-      // 핵심 로직 : pagination이 이루어질 수록
-      // 해당 results 배열의 크기가 커진다.
-      results.push(...data);
+      // cache에 저장된 query를 순회하는 로직
+      console.log(fi.fieldKey);
+      const key = cache.resolve(entityKey, fi.fieldKey) as string;
+      // 쿼리 결과 안에 객체가 있기 때문에 한 번 더 질의를 해야 한다.
+      data.push(...(cache.resolve(key, "posts") as string[]));
+      const _hasMore = cache.resolve(key, "hasMore") as boolean;
+
+      if (!_hasMore) hasMore = _hasMore;
+      // 하나라도 hasMore가 false면 더 이상 가질 게 없다는 뜻
     });
-    return results; // Entity 이름과 고유 id로 이루어진 배열만 주면 그것을 파싱해서 데이터를 보여준다?
+    return {
+      __typename: "PaginatedPosts", // typename을 반드시 적어줘야 nested 객체를 urql이 이해할 수 있다.
+      hasMore,
+      posts: data,
+    }; // Entity 이름과 고유 id로 이루어진 배열만 주면 그것을 파싱해서 데이터를 보여준다?
   };
 };
 
@@ -68,6 +75,9 @@ export const createUrqlClient = (ssrExchange: any) => ({
   exchanges: [
     dedupExchange,
     cacheExchange({
+      keys: {
+        PaginatedPosts: () => null, // nested 응답 객체의 key가 없을 경우
+      },
       resolvers: {
         // client side resolver : client - side에서 작동하는 query 제어
         Query: {

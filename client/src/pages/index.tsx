@@ -10,13 +10,14 @@ import { useState } from 'react';
 
 const Index = () => {
   const [variables, setVariables] = useState<{ limit: number, cursor?: string }>({ limit: 10 });
-  const [{ data, fetching }, postsQuery] = usePostsQuery({ variables });
+  const [{ data, fetching, }] = usePostsQuery({ variables });
   // query에 variable이 필요한 경우
 
   // SSR을 true로 해 놓을 경우 fetching이 false로 될 때 까지 페이지 응답을 보내지 않는다.
 
   // runtime 이 함수로 들어왔을 때 이 부분을 먼저 확인한다.
-  if (!fetching && !data) {
+  if (!fetching && (!data)) {
+
     return <div>You got query failed for some reason</div>
   }
 
@@ -29,7 +30,7 @@ const Index = () => {
         </NextLink>
       </Flex>
       <Stack spacing={8} mt={4}>
-        {data ? data.posts.map(p => (
+        {data ? data.posts.posts.map(p => (
 
           <Box key={p.id} p={5} shadow={"md"} borderWidth={"1px"} >
             <Heading fontSize={"xl"}>{p.title}</Heading>
@@ -38,12 +39,12 @@ const Index = () => {
         )) : <div>Loading</div>}
 
       </Stack>
-      {data &&
+      {(data && data.posts.hasMore) &&
         <Flex >
           <Button margin="auto" bgColor={"teal"} my={8} onClick={() => {
-            setVariables({ limit: 10, cursor: data.posts[data.posts.length - 1].createdAt });
+            setVariables({ limit: 10, cursor: data.posts.posts[data.posts.posts.length - 1].createdAt });
 
-          }}>Load More
+          }} isLoading={fetching}>Load More
           </Button>
         </Flex>
       }

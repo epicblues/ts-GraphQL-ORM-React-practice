@@ -36,6 +36,15 @@ class PostResponse {
   post?: Post;
 }
 
+@ObjectType()
+class PaginatedPosts {
+  @Field(() => [Post])
+  posts: Post[];
+
+  @Field(() => Boolean)
+  hasMore: boolean;
+}
+
 @Resolver(Post) // 어떤 entity를 대상으로 resolve 하는가?
 export class PostResolver {
   // 필드 값을 가공해서 전송
@@ -47,17 +56,17 @@ export class PostResolver {
     return root.length > 50 ? root.slice(0, 50).concat("...") : root;
   }
 
-  @Query(() => [Post]) // 이 query를 통해 return 할 데이터의 type
+  @Query(() => PaginatedPosts) // 이 query를 통해 return 할 데이터의 type
   async posts(
     @Arg("limit", () => Int) limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string | null
-  ): Promise<Post[]> {
+  ): Promise<PaginatedPosts> {
     //pagination 활용 : 한 번에 모든 페이지 데이터를 가져오는 것은 바람직하지 못하다.
     // 2가지 방법 : Cursor Based Pagination vs Offset Based Pagination
     // 후자가 편한 방법이지만, update가 자주 이루어지는 컨텐츠의 경우 순서가 꼬일 수 있다.
 
-    const realLimit = Math.min(50, limit); // 최대 50 record를 db에서 질의하도록
-
+    const realLimit = Math.min(50, limit) + 1; // 최대 50 record를 db에서 질의하도록
+    // 더 받을 수 있는 data가 있는지 trick 부여
     const qb = getConnection()
       .getRepository(Post)
       .createQueryBuilder("p")
@@ -71,7 +80,14 @@ export class PostResolver {
 
       // 조건에 따라서 순서와 상관 없이 qb에 query를 추가할 수 있다.
     }
-    return qb.getMany();
+
+    const posts = await qb.getMany();
+    const hasMore = posts.length === realLimit;
+
+    return {
+      posts: hasMore ? posts.slice(0, realLimit - 1) : posts,
+      hasMore,
+    };
   }
 
   @Query(() => Post, { nullable: true }) // 이 query를 통해 return 할 데이터의 type
