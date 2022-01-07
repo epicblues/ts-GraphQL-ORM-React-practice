@@ -22,11 +22,11 @@ export class Post extends BaseEntity {
   // non-null/non-undefined operator
 
   @Field(() => String)
-  @Column()
+  @Column({ type: "text" })
   title!: string;
 
   @Field(() => String)
-  @Column()
+  @Column({ type: "text" })
   text!: string;
 
   @Field(() => Int)

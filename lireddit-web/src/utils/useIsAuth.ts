@@ -8,11 +8,11 @@ import { MeQuery, useMeQuery } from "../generated/graphql";
 export const useIsAuth = (): [MeQuery | undefined, boolean, NextRouter] => {
   const [{ data, fetching }] = useMeQuery();
   const router = useRouter();
-
   useEffect(() => {
     if (!fetching && !data?.me)
       // fetching이 false가 되어야 meQuery의 결과값을 확인할 수 있다.
-      router.replace("/login");
+      router.replace("/login?next=" + router.pathname); // 이동 하기 전에 지금 경로를 저장한다
+    // login 페이지에서 router.query.next 로 접근할 수 있다.
   }, [data, router, fetching]);
 
   return [data, fetching, router];

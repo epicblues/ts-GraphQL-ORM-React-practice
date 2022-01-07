@@ -8,7 +8,9 @@ import NextLink from 'next/link'
 
 
 const Index = () => {
-  const [{ data }] = usePostsQuery();
+  const [{ data }, postsQuery] = usePostsQuery({ variables: { limit: 10 } });
+  // query에 variable이 필요한 경우
+
   // SSR을 true로 해 놓을 경우 fetching이 false로 될 때 까지 페이지 응답을 보내지 않는다.
 
   return (

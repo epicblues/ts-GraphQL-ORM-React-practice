@@ -19,17 +19,23 @@ import { createConnection } from "typeorm";
 import { User } from "./entities/User";
 import { Post } from "./entities/Post";
 
+import path from "path";
+
 try {
   (async () => {
+    console.log(__dirname);
     await createConnection({
       type: "mysql",
       database: "lireddit2",
       username: process.env.DB_USER as string,
       password: process.env.DB_PASSWORD as string,
       logging: true,
-      synchronize: true, // migration 없이 애플리케이션의 entity를 db와 동기화
+      // synchronize: true, // migration 없이 애플리케이션의 entity를 db와 동기화
       entities: [Post, User],
+      migrations: [path.resolve(__dirname, "./migrations/*")], // 해당 파일을 실행하는 절대 경로
+      migrationsRun: true,
     });
+
     const app = express();
 
     // cors -> 클라이언트에서 credentials(cookie 등)을 활용하려면

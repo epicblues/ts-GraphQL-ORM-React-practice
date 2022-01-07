@@ -25,6 +25,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ }) => {
           if (response.data?.forgotPassword.valueOf()) {
 
             setComplete(true);
+
           } else {
             setErrors({ email: "Server Error" })
           }

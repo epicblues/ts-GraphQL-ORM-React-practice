@@ -8,10 +8,13 @@ import {
   Operation,
 } from "urql";
 import {
+  CreatePostMutation,
   LoginMutation,
   LogoutMutation,
   MeDocument,
   MeQuery,
+  PostsDocument,
+  PostsQuery,
   RegisterMutation,
 } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
@@ -79,6 +82,24 @@ export const createUrqlClient = (ssrExchange: any) => ({
                   };
                 }
                 return query;
+              }
+            );
+          },
+          createPost: (_result, args, cache, info) => {
+            betterUpdateQuery<CreatePostMutation, PostsQuery>(
+              cache,
+              { query: PostsDocument },
+              _result,
+              (result, query) => {
+                console.log("is this query works? ", result);
+                if (result.createPost.post) {
+                  return {
+                    __typename: "Query",
+                    posts: [result.createPost.post, ...query.posts],
+                  };
+                } else {
+                  return query;
+                }
               }
             );
           },

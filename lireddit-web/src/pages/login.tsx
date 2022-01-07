@@ -4,7 +4,7 @@ import { Form, Formik } from 'formik'
 import { Box, Button, Flex, FormControl, FormErrorMessage, FormLabel, Input, Link } from '@chakra-ui/react'
 import { Wrapper } from '../components/Wrapper';
 import { InputField } from '../components/InputField';
-import { useLoginMutation, useRegisterMutation, UsernamePasswordInput } from '../generated/graphql'
+import { RegularPostResponseFragmentDoc, useLoginMutation, useRegisterMutation, UsernamePasswordInput } from '../generated/graphql'
 import { toErrorMap } from '../utils/toErrorMap';
 import { useRouter } from 'next/router';
 import { withUrqlClient } from 'next-urql';
@@ -30,7 +30,16 @@ const Login: React.FC<LoginProps> = ({ }) => {
           if (response.data?.login.errors) {
             setErrors(toErrorMap(response.data.login.errors))
           } else if (response.data?.login.user) {
-            router.push('/')
+
+            // typeof 연산자로 해당 property의 속성을 통해 데이터 유무를 확인할 수 있다
+            if (typeof router.query.next !== 'string') {
+              // 따로 저장한 경로가 없을 경우
+              router.replace('/');
+            } else {
+              // 개발자가 따로 저장한 경로가 있을 경우
+              router.replace(router.query.next);
+            }
+
           }
         }}>
         {

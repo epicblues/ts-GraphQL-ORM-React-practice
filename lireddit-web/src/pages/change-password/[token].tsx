@@ -12,10 +12,13 @@ import { toErrorMap } from '../../utils/toErrorMap';
 import NextLink from 'next/link'
 
 
-const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
+const ChangePassword: NextPage<{}> = () => {
   const [, changePassword] = useChangePasswordMutation()
   const [tokenError, setTokenError] = useState('');
   const router = useRouter()
+  // router를 통해 직접 query에 접근할 수 있다.
+  // initialProps 등을 활용할 필요가 없다.
+  const token = router.query.token as string;
   return (
 
     <Wrapper variant='small'>
@@ -64,10 +67,5 @@ const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
 }
 
 
-ChangePassword.getInitialProps = async ({ query }) => {
-  return {
-    token: query.token as string
-  }
-}
 
 export default withUrqlClient(createUrqlClient)(ChangePassword); 
