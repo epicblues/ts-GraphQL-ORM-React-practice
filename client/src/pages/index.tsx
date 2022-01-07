@@ -5,7 +5,7 @@ import { NavBar } from '../components/NavBar';
 import { usePostsQuery } from '../generated/graphql';
 import { createUrqlClient } from '../utils/createUrqlClient';
 import NextLink from 'next/link'
-
+import { Stack } from '@chakra-ui/react'
 
 const Index = () => {
   const [{ data }, postsQuery] = usePostsQuery({ variables: { limit: 10 } });
@@ -20,7 +20,10 @@ const Index = () => {
       </NextLink>
       <div>Hello World</div>
       <br />
-      {data ? data.posts.map(p => <div key={p.id}>{p.title}</div>) : <div>Loading</div>}
+      <Stack spacing={8}>
+        {data ? data.posts.map(p => <div key={p.id}>{p.title}</div>) : <div>Loading</div>}
+
+      </Stack>
     </Layout>);
 
 }
