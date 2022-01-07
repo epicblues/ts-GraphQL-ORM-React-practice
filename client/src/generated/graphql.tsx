@@ -79,6 +79,7 @@ export type Post = {
   id: Scalars['Int'];
   points: Scalars['Int'];
   text: Scalars['String'];
+  textSnippet: Scalars['String'];
   title: Scalars['String'];
   updatedAt: Scalars['String'];
 };
@@ -136,9 +137,9 @@ export type UsernamePasswordInput = {
 
 export type RegularErrorFragment = { __typename?: 'FieldError', field: string, message: string };
 
-export type RegularPostFragment = { __typename?: 'Post', id: number, title: string, text: string, creatorId: number, createdAt: string, updatedAt: string, points: number };
+export type RegularPostFragment = { __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number };
 
-export type RegularPostResponseFragment = { __typename?: 'PostResponse', errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined, post?: { __typename?: 'Post', id: number, title: string, text: string, creatorId: number, createdAt: string, updatedAt: string, points: number } | null | undefined };
+export type RegularPostResponseFragment = { __typename?: 'PostResponse', errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined, post?: { __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number } | null | undefined };
 
 export type RegularUserFragment = { __typename?: 'User', id: number, username: string, email: string };
 
@@ -157,7 +158,7 @@ export type CreatePostMutationVariables = Exact<{
 }>;
 
 
-export type CreatePostMutation = { __typename?: 'Mutation', createPost: { __typename?: 'PostResponse', errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined, post?: { __typename?: 'Post', id: number, title: string, text: string, creatorId: number, createdAt: string, updatedAt: string, points: number } | null | undefined } };
+export type CreatePostMutation = { __typename?: 'Mutation', createPost: { __typename?: 'PostResponse', errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined, post?: { __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number } | null | undefined } };
 
 export type ForgotPasswordMutationVariables = Exact<{
   email: Scalars['String'];
@@ -197,7 +198,7 @@ export type PostsQueryVariables = Exact<{
 }>;
 
 
-export type PostsQuery = { __typename?: 'Query', posts: Array<{ __typename?: 'Post', id: number, title: string, text: string, creatorId: number, createdAt: string, updatedAt: string, points: number }> };
+export type PostsQuery = { __typename?: 'Query', posts: Array<{ __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number }> };
 
 export const RegularErrorFragmentDoc = gql`
     fragment RegularError on FieldError {
@@ -209,7 +210,7 @@ export const RegularPostFragmentDoc = gql`
     fragment RegularPost on Post {
   id
   title
-  text
+  textSnippet
   creatorId
   createdAt
   updatedAt

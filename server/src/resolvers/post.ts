@@ -4,12 +4,14 @@ import {
   Arg,
   Ctx,
   Field,
+  FieldResolver,
   InputType,
   Int,
   Mutation,
   ObjectType,
   Query,
   Resolver,
+  Root,
   UseMiddleware,
 } from "type-graphql";
 import { Post } from "../entities/Post";
@@ -34,8 +36,17 @@ class PostResponse {
   post?: Post;
 }
 
-@Resolver()
+@Resolver(Post) // 어떤 entity를 대상으로 resolve 하는가?
 export class PostResolver {
+  // 필드 값을 가공해서 전송
+  // ex-> Post의 본문이 너무 길 때 미리보기 형태로 제공하기
+  // 실제 db에 있는 데이터가 아니다.
+  // 서버에서 만들어서 보내는 것
+  @FieldResolver(() => String)
+  textSnippet(@Root("text") root: string) {
+    return root.length > 50 ? root.slice(0, 50).concat("...") : root;
+  }
+
   @Query(() => [Post]) // 이 query를 통해 return 할 데이터의 type
   async posts(
     @Arg("limit", () => Int) limit: number,
