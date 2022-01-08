@@ -81,6 +81,7 @@ export type PaginatedPosts = {
 export type Post = {
   __typename?: 'Post';
   createdAt: Scalars['String'];
+  creator: User;
   creatorId: Scalars['Int'];
   id: Scalars['Int'];
   points: Scalars['Int'];
@@ -125,6 +126,7 @@ export type User = {
   createdAt: Scalars['String'];
   email: Scalars['String'];
   id: Scalars['Int'];
+  posts: Array<Post>;
   updatedAt: Scalars['String'];
   username: Scalars['String'];
 };
@@ -143,9 +145,9 @@ export type UsernamePasswordInput = {
 
 export type RegularErrorFragment = { __typename?: 'FieldError', field: string, message: string };
 
-export type RegularPostFragment = { __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number };
+export type RegularPostFragment = { __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number, creator: { __typename?: 'User', id: number, username: string, email: string } };
 
-export type RegularPostResponseFragment = { __typename?: 'PostResponse', errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined, post?: { __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number } | null | undefined };
+export type RegularPostResponseFragment = { __typename?: 'PostResponse', errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined, post?: { __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number, creator: { __typename?: 'User', id: number, username: string, email: string } } | null | undefined };
 
 export type RegularUserFragment = { __typename?: 'User', id: number, username: string, email: string };
 
@@ -164,7 +166,7 @@ export type CreatePostMutationVariables = Exact<{
 }>;
 
 
-export type CreatePostMutation = { __typename?: 'Mutation', createPost: { __typename?: 'PostResponse', errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined, post?: { __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number } | null | undefined } };
+export type CreatePostMutation = { __typename?: 'Mutation', createPost: { __typename?: 'PostResponse', errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined, post?: { __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number, creator: { __typename?: 'User', id: number, username: string, email: string } } | null | undefined } };
 
 export type ForgotPasswordMutationVariables = Exact<{
   email: Scalars['String'];
@@ -204,12 +206,19 @@ export type PostsQueryVariables = Exact<{
 }>;
 
 
-export type PostsQuery = { __typename?: 'Query', posts: { __typename?: 'PaginatedPosts', hasMore: boolean, posts: Array<{ __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number }> } };
+export type PostsQuery = { __typename?: 'Query', posts: { __typename?: 'PaginatedPosts', hasMore: boolean, posts: Array<{ __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number, creator: { __typename?: 'User', id: number, username: string, email: string } }> } };
 
 export const RegularErrorFragmentDoc = gql`
     fragment RegularError on FieldError {
   field
   message
+}
+    `;
+export const RegularUserFragmentDoc = gql`
+    fragment RegularUser on User {
+  id
+  username
+  email
 }
     `;
 export const RegularPostFragmentDoc = gql`
@@ -221,8 +230,11 @@ export const RegularPostFragmentDoc = gql`
   createdAt
   updatedAt
   points
+  creator {
+    ...RegularUser
+  }
 }
-    `;
+    ${RegularUserFragmentDoc}`;
 export const RegularPostResponseFragmentDoc = gql`
     fragment RegularPostResponse on PostResponse {
   errors {
@@ -234,13 +246,6 @@ export const RegularPostResponseFragmentDoc = gql`
 }
     ${RegularErrorFragmentDoc}
 ${RegularPostFragmentDoc}`;
-export const RegularUserFragmentDoc = gql`
-    fragment RegularUser on User {
-  id
-  username
-  email
-}
-    `;
 export const RegularUserResponseFragmentDoc = gql`
     fragment RegularUserResponse on UserResponse {
   errors {

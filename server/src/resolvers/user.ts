@@ -1,25 +1,27 @@
-import { User } from "../entities/User";
-import { MyContext } from "../types";
+import { compareSync, hashSync } from "bcrypt";
 import {
   Arg,
   Ctx,
   Field,
+  FieldResolver,
   Mutation,
   ObjectType,
   Query,
   Resolver,
+  Root,
 } from "type-graphql";
-import { hashSync, compareSync } from "bcrypt";
+import { getConnection } from "typeorm";
+// version 4 UUID를 생성하는 메서드
+import { v4 } from "uuid";
 // MikroOrm의 em이 정상적으로 사용되지 못할 경우
 // 직접 querybuilder를 사용해서 query를 만들어야 한다.(knex 사용)
 import { COOKIE_NAME, FORGET_PASSWORD_PREFIX } from "../constants";
-import { UsernamePasswordInput } from "./UsernamePasswordInput";
-import { validateRegister } from "../utils/validateRegister";
+import { User } from "../entities/User";
+import { MyContext } from "../types";
 import { sendEmail } from "../utils/sendEmail";
-// version 4 UUID를 생성하는 메서드
-import { v4 } from "uuid";
-import { getConnection } from "typeorm";
+import { validateRegister } from "../utils/validateRegister";
 import { FieldError } from "./FieldError";
+import { UsernamePasswordInput } from "./UsernamePasswordInput";
 
 @ObjectType() // graphql에서 활용할 수 있게 만드는 decorator
 class UserResponse {
@@ -31,8 +33,20 @@ class UserResponse {
   user?: User;
 }
 
-@Resolver()
+@Resolver(User) // 대상 entity를 넣지 않으면 @Root로 entity 속성에 접간할 수 없다.
 export class UserResolver {
+  @FieldResolver(() => String)
+  email(@Root() user: User, @Ctx() { req }: MyContext) {
+    if (req.session.userId === user.id) {
+      // 정보 조회 권한이 있는 나 자신
+      // 따라서 이메일을 확인해도 된다.
+
+      return user.email;
+    }
+    //다른 사용자가 이 사용자의 이메일을 보고 싶은 경우
+    return "";
+  }
+
   @Mutation(() => UserResponse)
   async changePassword(
     @Ctx() { redis }: MyContext,
@@ -131,8 +145,14 @@ export class UserResolver {
     if (!req.session.userId) {
       return undefined;
     }
+    const user = await getConnection()
+      .getRepository(User)
+      .createQueryBuilder("u")
+      .where("u.id = :id", { id: req.session.userId })
+      .leftJoinAndSelect("u.posts", "p", "p.creatorId = u.id")
+      .getOne();
 
-    return await User.findOne({ id: req.session.userId });
+    return user;
   }
 
   @Mutation(() => UserResponse) // 이 query를 통해 return 할 데이터의 type

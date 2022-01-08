@@ -5,6 +5,7 @@ import {
   Ctx,
   Field,
   FieldResolver,
+  Info,
   InputType,
   Int,
   Mutation,
@@ -59,22 +60,28 @@ export class PostResolver {
   @Query(() => PaginatedPosts) // 이 query를 통해 return 할 데이터의 type
   async posts(
     @Arg("limit", () => Int) limit: number,
-    @Arg("cursor", () => String, { nullable: true }) cursor: string | null
+    @Arg("cursor", () => String, { nullable: true }) cursor: string | null,
+    @Info() info: any // info object에 있는 필드를 활용할 수 있다.
   ): Promise<PaginatedPosts> {
     //pagination 활용 : 한 번에 모든 페이지 데이터를 가져오는 것은 바람직하지 못하다.
     // 2가지 방법 : Cursor Based Pagination vs Offset Based Pagination
     // 후자가 편한 방법이지만, update가 자주 이루어지는 컨텐츠의 경우 순서가 꼬일 수 있다.
-
+    console.log(info);
     const realLimit = Math.min(50, limit) + 1; // 최대 50 record를 db에서 질의하도록
     // 더 받을 수 있는 data가 있는지 trick 부여
+
+    // cf) queryBuilder 없이 진행할 경우. 직접 inner join을 한 다음에 그 데이터들을
+    // join된 column들을 갖고 직접 새로운 객체로 만들어야 한다.
+    // 아니면  DB에서 지원하는 JSON 생성 함수를 사용해서 특정 필드에 객체를 넣어서 전송할 수 있다.
     const qb = getConnection()
       .getRepository(Post)
-      .createQueryBuilder("p")
-      .orderBy("createdAt", "DESC")
+      .createQueryBuilder("p") // alias for post
+      .innerJoinAndSelect("p.creator", "u", "u.id = p.creatorId")
+      .orderBy("p.createdAt", "DESC")
       .take(realLimit); // 질의 개수 설정
 
     if (cursor) {
-      qb.where("createdAt < :cursor", { cursor: new Date(+cursor) });
+      qb.where("p.createdAt < :cursor", { cursor: new Date(+cursor) });
       // new Date로 완전히 Date 객체로 바꾸어야 비교가 가능하다.
       // cursor보다 일찍 생성된 컨텐츠만 출력한다.
 

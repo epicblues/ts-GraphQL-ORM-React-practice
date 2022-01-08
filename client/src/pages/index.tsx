@@ -33,7 +33,11 @@ const Index = () => {
         {data ? data.posts.posts.map(p => (
 
           <Box key={p.id} p={5} shadow={"md"} borderWidth={"1px"} >
-            <Heading fontSize={"xl"}>{p.title}</Heading>
+            <Flex align="center">
+
+              <Heading fontSize={"2xl"}>{p.title}</Heading>
+              <Heading fontSize="xl" ml="auto">by {p.creator.username}</Heading>
+            </Flex>
             <Text mt={4}>{p.textSnippet}</Text>
           </Box>
         )) : <div>Loading</div>}

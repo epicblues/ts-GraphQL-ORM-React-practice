@@ -6,4 +6,7 @@ fragment RegularPost on Post {
   createdAt
   updatedAt
   points
+  creator {
+    ...RegularUser
+  }
 }

@@ -30,7 +30,7 @@ try {
       username: process.env.DB_USER as string,
       password: process.env.DB_PASSWORD as string,
       logging: true,
-      // synchronize: true, // migration 없이 애플리케이션의 entity를 db와 동기화
+      synchronize: true, // migration 없이 애플리케이션의 entity를 db와 동기화
       entities: [Post, User],
       migrations: [path.resolve(__dirname, "./migrations/*")], // 해당 파일을 실행하는 절대 경로
       migrationsRun: true,
@@ -91,6 +91,8 @@ try {
       app,
       cors: false,
     }); // express에 graphql endpoint 생성
+
+    // throw new Error("baka");
     app.listen(4000, () => {
       console.log("server started on localhost:4000");
     });

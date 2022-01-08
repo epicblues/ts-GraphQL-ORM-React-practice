@@ -38,9 +38,11 @@ export class Post extends BaseEntity {
   creatorId: number;
 
   // database에 user.id와 연결된 foreign key 설정
-  // graphql에 직접적으로 노출할 필요가 없으므로 field decorator X
+  // db 테이블에 직접 만들어지는 것은 아니고
+  // inner join을 할 때 nested 한 상태로 들어온다
+  @Field(() => User)
   @ManyToOne(() => User, (user) => user.posts)
-  originalPoster: User;
+  creator: User;
 
   @Field(() => String)
   @CreateDateColumn() // 생성된 시점을 날짜로 저장해주는 typeORM의 decorator

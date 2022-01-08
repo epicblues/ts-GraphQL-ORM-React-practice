@@ -29,8 +29,8 @@ export class User extends BaseEntity {
   password!: string;
 
   // post와 일대 다 관계
-  // graphql에 노출할 필요가 없으므로 decorator 사용 X
-  @OneToMany(() => Post, (post) => post.originalPoster)
+  @Field(() => [Post])
+  @OneToMany(() => Post, (post) => post.creator)
   posts: Post[];
 
   @Field(() => String)
