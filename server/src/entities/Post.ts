@@ -4,10 +4,12 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
 import { Entity } from "typeorm/decorator/entity/Entity";
+import { Updoot } from "./Updoot";
 import { User } from "./User";
 
 @ObjectType() // stacked Decorator - class 이므로 type-graphql에서 사용하는 type으로도 간주 가능
@@ -43,6 +45,10 @@ export class Post extends BaseEntity {
   @Field(() => User)
   @ManyToOne(() => User, (user) => user.posts)
   creator: User;
+
+  @Field(() => [Updoot])
+  @OneToMany(() => Updoot, (updoot) => updoot.post)
+  updoots: Updoot[];
 
   @Field(() => String)
   @CreateDateColumn() // 생성된 시점을 날짜로 저장해주는 typeORM의 decorator

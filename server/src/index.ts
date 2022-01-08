@@ -20,6 +20,7 @@ import { User } from "./entities/User";
 import { Post } from "./entities/Post";
 
 import path from "path";
+import { Updoot } from "./entities/Updoot";
 
 try {
   (async () => {
@@ -31,7 +32,7 @@ try {
       password: process.env.DB_PASSWORD as string,
       logging: true,
       synchronize: true, // migration 없이 애플리케이션의 entity를 db와 동기화
-      entities: [Post, User],
+      entities: [Post, User, Updoot],
       migrations: [path.resolve(__dirname, "./migrations/*")], // 해당 파일을 실행하는 절대 경로
       migrationsRun: true,
     });

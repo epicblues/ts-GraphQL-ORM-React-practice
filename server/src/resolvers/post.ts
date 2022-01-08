@@ -1,5 +1,3 @@
-import { isAuth } from "../middleware/isAuth";
-import { MyContext } from "../types";
 import {
   Arg,
   Ctx,
@@ -15,9 +13,11 @@ import {
   Root,
   UseMiddleware,
 } from "type-graphql";
-import { Post } from "../entities/Post";
-import { FieldError } from "./FieldError";
 import { getConnection } from "typeorm";
+import { Post } from "../entities/Post";
+import { isAuth } from "../middleware/isAuth";
+import { MyContext } from "../types";
+import { FieldError } from "./FieldError";
 
 @InputType()
 class PostInput {
@@ -61,12 +61,11 @@ export class PostResolver {
   async posts(
     @Arg("limit", () => Int) limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string | null,
-    @Info() info: any // info object에 있는 필드를 활용할 수 있다.
+    @Info() _: any // info object에 있는 필드를 활용할 수 있다.
   ): Promise<PaginatedPosts> {
     //pagination 활용 : 한 번에 모든 페이지 데이터를 가져오는 것은 바람직하지 못하다.
     // 2가지 방법 : Cursor Based Pagination vs Offset Based Pagination
     // 후자가 편한 방법이지만, update가 자주 이루어지는 컨텐츠의 경우 순서가 꼬일 수 있다.
-    console.log(info);
     const realLimit = Math.min(50, limit) + 1; // 최대 50 record를 db에서 질의하도록
     // 더 받을 수 있는 data가 있는지 trick 부여
 
@@ -101,6 +100,37 @@ export class PostResolver {
   post(@Arg("id") id: number): Promise<Post | undefined> {
     // apolloServer 인스턴스를 생성할 때 context 옵션에 넣은 객체를 사용할 수 있다.
     return Post.findOne(id);
+  }
+
+  @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
+  async vote(
+    @Arg("postId", () => Int!) postId: number,
+    @Arg("value", () => Int!) value: number,
+    @Ctx() { req: { session } }: MyContext
+  ): Promise<boolean> {
+    const { userId } = session;
+    const isUpdoot = value !== -1;
+    const realValue = isUpdoot ? 1 : -1;
+    // 일종의 선언 : 30포인트 들어와도 1 포인트만 주겠다.
+    // 클라이언트의 숫자에서 신경쓰는 것은 +1이냐 -1이냐
+
+    // increase the count on post
+    await getConnection().transaction(async (em) => {
+      await em.query(
+        `
+        insert into updoot(userId, postId, value)
+        values(?,?,?);
+        `,
+        [userId, postId, realValue]
+      );
+      await em.query(`
+   update post p SET points = points + ${realValue} where p.id = ${postId};
+    `);
+    });
+    // transaction 단위로 묶어서 하나의 쿼리가 실패하면 둘 다 실패한 것으로 간주한다.
+
+    return true;
   }
 
   @Mutation(() => PostResponse) // 데이터를 변경(C,U,D)를 할 때 사용하는 decorator
