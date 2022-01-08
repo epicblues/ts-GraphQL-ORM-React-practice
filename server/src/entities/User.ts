@@ -42,7 +42,6 @@ export class User extends BaseEntity {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @Field(() => [Updoot])
   @OneToMany(() => Updoot, (updoot) => updoot.user)
   updoots: Updoot[];
 }

@@ -3,6 +3,7 @@ fragment RegularPostResponse on PostResponse {
     ...RegularError
   }
   post {
-    ...RegularPost
+    title
+    text
   }
 }

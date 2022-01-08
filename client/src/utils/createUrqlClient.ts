@@ -28,9 +28,6 @@ const cursorPagination = (): Resolver => {
     // 'Query', 'posts'
 
     const allFields = cache.inspectFields(entityKey);
-    // 프로젝트가 커지면 다양한 query가 들어온다.
-    console.log(allFields);
-    // inspect all the queries in your cache
     const fieldInfos = allFields.filter((info) => info.fieldName === fieldName);
     const size = fieldInfos.length;
     if (size === 0) {
@@ -86,6 +83,23 @@ export const createUrqlClient = (ssrExchange: any) => ({
       },
       updates: {
         Mutation: {
+          createPost: (_result, args, cache, info) => {
+            // invalidate query and refetch from server
+            // 글을 등록한 시점에서 이 글이 가장 최신인지 알 수 없다.
+            // 사용자가 많은 reddit과 같은 서비스가 대표적 예시
+            // 해당 항목에 속하는 cache 데이터 제거
+
+            const allFields = cache.inspectFields("Query");
+            const fieldInfos = allFields.filter(
+              (info) => info.fieldName === "posts"
+            );
+            // 연관된 모든  query를 invalidate 한다.
+            fieldInfos.forEach((info) => {
+              cache.invalidate("Query", info.fieldName, info.arguments);
+              // 모든 cache 제거(Query -> post)
+              // 첫 페이지로 이동하면서 첫 쿼리만 다시 수행
+            });
+          },
           login: (_result, args, cache, info) => {
             betterUpdateQuery<LoginMutation, MeQuery>(
               cache,

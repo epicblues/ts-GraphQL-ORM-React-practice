@@ -9,7 +9,7 @@ import { Stack } from '@chakra-ui/react'
 import { useState } from 'react';
 
 const Index = () => {
-  const [variables, setVariables] = useState<{ limit: number, cursor?: string }>({ limit: 10 });
+  const [variables, setVariables] = useState<{ limit: number, cursor?: string }>({ limit: 15 });
   const [{ data, fetching, }] = usePostsQuery({ variables });
   // query에 variable이 필요한 경우
 
@@ -33,11 +33,13 @@ const Index = () => {
         {data ? data.posts.posts.map(p => (
 
           <Box key={p.id} p={5} shadow={"md"} borderWidth={"1px"} >
-            <Flex align="center">
+            <Box >
 
               <Heading fontSize={"2xl"}>{p.title}</Heading>
-              <Heading fontSize="xl" ml="auto">by {p.creator.username}</Heading>
-            </Flex>
+
+              <Text>posted by {p.creator.username}</Text>
+
+            </Box>
             <Text mt={4}>{p.textSnippet}</Text>
           </Box>
         )) : <div>Loading</div>}
