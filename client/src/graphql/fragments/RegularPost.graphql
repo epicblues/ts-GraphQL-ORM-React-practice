@@ -1,12 +1,13 @@
 fragment RegularPost on Post {
   id
   title
-  textSnippet
+  text
   creatorId
   createdAt
   updatedAt
   points
   creator {
-    ...RegularUser
+    username
+    id
   }
 }

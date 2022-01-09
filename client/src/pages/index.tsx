@@ -1,14 +1,11 @@
-import { Box, Button, Flex, Heading, IconButton, Link, Text } from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Link, Stack, Text } from '@chakra-ui/react';
 import { withUrqlClient } from 'next-urql';
+import NextLink from 'next/link';
+import { useState } from 'react';
 import { Layout } from '../components/Layout';
-import { NavBar } from '../components/NavBar';
+import { UpdootSection } from '../components/UpdootSection';
 import { usePostsQuery } from '../generated/graphql';
 import { createUrqlClient } from '../utils/createUrqlClient';
-import NextLink from 'next/link'
-import { Stack } from '@chakra-ui/react'
-import { useEffect, useState } from 'react';
-import { ChevronDownIcon, ChevronUpIcon, Icon } from '@chakra-ui/icons';
-import { UpdootSection } from '../components/UpdootSection';
 
 const Index = () => {
   const [variables, setVariables] = useState<{ limit: number, cursor?: string }>({ limit: 15 });
@@ -25,12 +22,7 @@ const Index = () => {
 
   return (
     <Layout variant='regular'>
-      <Flex align={"center"}>
-        <Heading>LiReddit</Heading>
-        <NextLink href="/create-post">
-          <Link ml={"auto"}>Create Post</Link>
-        </NextLink>
-      </Flex>
+
       <Stack spacing={8} mt={4}>
         {data ? data.posts.posts.map(p => {
           return (
@@ -38,7 +30,15 @@ const Index = () => {
             <Flex key={p.id} p={5} shadow={"md"} borderWidth={"1px"}>
               <UpdootSection post={p} />
               <Box>
-                <Heading fontSize={"2xl"}>{p.title}</Heading>
+                <Heading fontSize={"2xl"}>
+                  <NextLink href={`/post/[id]`} as={`/post/${p.id}`}>
+                    {/* Next.js Dynamic Routing */}
+                    <Link>
+                      {p.title}
+                    </Link>
+                  </NextLink>
+
+                </Heading>
                 <Text>posted by {p.creator.username}</Text>
                 <Text mt={4}>{p.textSnippet}</Text>
               </Box>

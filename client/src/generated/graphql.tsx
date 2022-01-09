@@ -120,7 +120,7 @@ export type Query = {
 
 
 export type QueryPostArgs = {
-  id: Scalars['Float'];
+  id: Scalars['Int'];
 };
 
 
@@ -155,7 +155,7 @@ export type PostSnippetFragment = { __typename?: 'Post', id: number, title: stri
 
 export type RegularErrorFragment = { __typename?: 'FieldError', field: string, message: string };
 
-export type RegularPostFragment = { __typename?: 'Post', id: number, title: string, textSnippet: string, creatorId: number, createdAt: string, updatedAt: string, points: number, creator: { __typename?: 'User', id: number, username: string, email: string } };
+export type RegularPostFragment = { __typename?: 'Post', id: number, title: string, text: string, creatorId: number, createdAt: string, updatedAt: string, points: number, creator: { __typename?: 'User', username: string, id: number } };
 
 export type RegularPostResponseFragment = { __typename?: 'PostResponse', errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined, post?: { __typename?: 'Post', title: string, text: string } | null | undefined };
 
@@ -218,6 +218,13 @@ export type MeQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type MeQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: number, username: string, email: string } | null | undefined };
 
+export type PostQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type PostQuery = { __typename?: 'Query', post?: { __typename?: 'Post', id: number, title: string, text: string, creatorId: number, createdAt: string, updatedAt: string, points: number, creator: { __typename?: 'User', username: string, id: number } } | null | undefined };
+
 export type PostsQueryVariables = Exact<{
   limit: Scalars['Int'];
   cursor?: InputMaybe<Scalars['String']>;
@@ -242,27 +249,21 @@ export const PostSnippetFragmentDoc = gql`
   voteStatus
 }
     `;
-export const RegularUserFragmentDoc = gql`
-    fragment RegularUser on User {
-  id
-  username
-  email
-}
-    `;
 export const RegularPostFragmentDoc = gql`
     fragment RegularPost on Post {
   id
   title
-  textSnippet
+  text
   creatorId
   createdAt
   updatedAt
   points
   creator {
-    ...RegularUser
+    username
+    id
   }
 }
-    ${RegularUserFragmentDoc}`;
+    `;
 export const RegularErrorFragmentDoc = gql`
     fragment RegularError on FieldError {
   field
@@ -280,6 +281,13 @@ export const RegularPostResponseFragmentDoc = gql`
   }
 }
     ${RegularErrorFragmentDoc}`;
+export const RegularUserFragmentDoc = gql`
+    fragment RegularUser on User {
+  id
+  username
+  email
+}
+    `;
 export const RegularUserResponseFragmentDoc = gql`
     fragment RegularUserResponse on UserResponse {
   errors {
@@ -372,6 +380,17 @@ export const MeDocument = gql`
 
 export function useMeQuery(options: Omit<Urql.UseQueryArgs<MeQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<MeQuery>({ query: MeDocument, ...options });
+};
+export const PostDocument = gql`
+    query Post($id: Int!) {
+  post(id: $id) {
+    ...RegularPost
+  }
+}
+    ${RegularPostFragmentDoc}`;
+
+export function usePostQuery(options: Omit<Urql.UseQueryArgs<PostQueryVariables>, 'query'> = {}) {
+  return Urql.useQuery<PostQuery>({ query: PostDocument, ...options });
 };
 export const PostsDocument = gql`
     query Posts($limit: Int!, $cursor: String) {

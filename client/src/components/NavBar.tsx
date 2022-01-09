@@ -1,9 +1,7 @@
-import { Box, Button, Flex } from '@chakra-ui/react';
-import { Link } from '@chakra-ui/react';
-import react, { ReactElement, useEffect, useState } from 'react'
-import NextLink from 'next/link'
+import { Box, Button, Flex, Heading, Link } from '@chakra-ui/react';
+import NextLink from 'next/link';
+import { useRouter } from 'next/router';
 import { useLogoutMutation, useMeQuery } from '../generated/graphql';
-import { isServer } from '../utils/isServer';
 
 interface NavBarProps {
 
@@ -27,7 +25,7 @@ export const NavBar: React.FC<NavBarProps> = ({ }) => {
   // 이전에 갔던 페이지들을 react routing으르 통해 다시 방문해도
   // fetching을 하지 않고 cached된 기존 상태값을 유지한다.
 
-
+  const router = useRouter()
 
 
 
@@ -38,7 +36,7 @@ export const NavBar: React.FC<NavBarProps> = ({ }) => {
   } else if (!data?.me) {
     body = (
       <>
-        <NextLink href="/login">
+        <NextLink href={"/login?next=" + router.asPath}>
           <Link mr={4} > Login </Link>
         </NextLink>
 
@@ -50,23 +48,40 @@ export const NavBar: React.FC<NavBarProps> = ({ }) => {
     // user is logged in
   } else {
     body = (
-      <Flex>
+      <>
+        <NextLink href="/create-post">
+          <Button as={Link} mr={4} colorScheme={"orange"}>Create Post</Button>
+          {/* look like button but act as link */}
+        </NextLink>
         <Box mr={4}>
-          Welcome, {data.me.username}
+          {data.me.username}
         </Box>
         <Button variant="link" onClick={() => { logout() }} isLoading={logoutFetching}>Logout</Button>
-      </Flex>
+      </>
     )
   }
 
 
 
   return (
-    <Flex p={4} bg="tan" position="sticky" top={0} zIndex={1}>
+    <Flex p={4} bg="tan" position="sticky" top={0} zIndex={1} >
+      <Flex alignItems={"center"} maxWidth={800} flex={1} m={"auto"}>
+        {/* 상위 flex에서 이 아이템이 얼마나 공간을 차지하는가? */}
+        {/* MaxWidth가 있기 때문에 항상 전체를 차지하지는 않는다. */}
+        <NextLink href="/">
+          <Link>
+            <Heading>
+              Lireddit
+            </Heading>
+          </Link>
+        </NextLink>
+
+        <Flex ml={"auto"} alignItems={"center"} >
+          {body}
+        </Flex>
+
+      </Flex>
       {/* sticky => 스크롤 상관 없이 해당 위치 유지, fixed 유사? */}
-      <Box ml={"auto"}>
-        {body}
-      </Box>
     </Flex>
   );
 }

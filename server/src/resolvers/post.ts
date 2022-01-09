@@ -112,9 +112,12 @@ export class PostResolver {
   }
 
   @Query(() => Post, { nullable: true }) // 이 query를 통해 return 할 데이터의 type
-  post(@Arg("id") id: number): Promise<Post | undefined> {
+  async post(@Arg("id", () => Int!) id: number): Promise<Post | undefined> {
     // apolloServer 인스턴스를 생성할 때 context 옵션에 넣은 객체를 사용할 수 있다.
-    return Post.findOne(id);
+
+    return Post.findOne(id, { relations: ["creator"] });
+    // 저절로 inner join을 시켜주는 TypeORM 메서드
+    // join된 table의 정보들을 내가 relation decorator로 등록했던 필드에 넣는다.
   }
 
   @Mutation(() => Boolean)
