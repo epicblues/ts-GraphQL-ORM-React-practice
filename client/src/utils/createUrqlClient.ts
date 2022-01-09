@@ -18,6 +18,7 @@ import {
   LogoutMutation,
   MeDocument,
   MeQuery,
+  MutationDeletePostArgs,
   PaginatedPosts,
   PostsDocument,
   PostSnippetFragment,
@@ -120,6 +121,18 @@ export const createUrqlClient: NextUrqlClientConfig = (
         },
         updates: {
           Mutation: {
+            deletePost: (
+              _result,
+              args: MutationDeletePostArgs,
+              cache,
+              info
+            ) => {
+              cache.invalidate({
+                __typename: "Post",
+                id: args.id!,
+              });
+            }, // cache에 등록된 특정 데이터 타입을 지우면 기존에 그 데이터를 가져왔던 쿼리를 다시 수행해서 갱신한다.
+
             vote: (
               _result: VoteMutation,
               args: VoteMutationVariables,

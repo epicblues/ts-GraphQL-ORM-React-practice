@@ -233,19 +233,25 @@ export class PostResolver {
   @Mutation(() => Boolean)
   @UseMiddleware(isAuth)
   async deletePost(
-    @Arg("title", () => String, { nullable: true }) title?: string,
-    @Arg("id", () => Int, { nullable: true }) id?: number
+    @Arg("id", () => Int) id: number,
+    @Ctx() { req }: MyContext
   ): Promise<boolean> {
-    try {
-      if (typeof title !== "undefined") {
-        await Post.delete({ title });
-        return true;
-      }
-      await Post.delete({ id });
-    } catch (err) {
-      return false;
-    }
+    // without cascading
+    // try {
+    //   const userId = req.session.userId;
+    //   // 묶여 있는 redoop table 제거
+    //   await getConnection().transaction(async (em) => {
+    //     await em.getRepository(Updoot).delete({ postId: id });
+    //     await em.getRepository(Post).delete({ id, creatorId: userId });
+    //   });
+    //   return true;
+    // } catch (err) {
+    //   return false;
+    // }
 
+    // cascade way
+    // 관계를 정의한 필드에 onDelete : CASCADE 설정
+    await Post.delete({ id, creatorId: req.session.userId });
     return true;
   }
 }

@@ -28,6 +28,8 @@ export class Updoot extends BaseEntity {
   @ManyToOne(() => User, (user) => user.updoots)
   user: User;
 
-  @ManyToOne(() => Post, (post) => post.updoots)
+  @ManyToOne(() => Post, (post) => post.updoots, {
+    onDelete: "CASCADE", // Post가 삭제 되면 Post와 연결된 updoots도 삭제한다.
+  })
   post: Post;
 }
