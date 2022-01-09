@@ -12,7 +12,7 @@ interface NavBarProps {
 export const NavBar: React.FC<NavBarProps> = ({ }) => {
 
   let body = null;
-  const [{ fetching, data, }] = useMeQuery({ pause: isServer() })
+  const [{ fetching, data, }] = useMeQuery()
   // fetching 을 통해 마치 promise pending state를 조회하듯이 상태를 확인하고
   // fetching이 false가 되면 그에 따라 바뀌어있는 data를 확인해서
   // 요청했던 결과를 확인하는 방식

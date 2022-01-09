@@ -1,3 +1,4 @@
+import { Updoot } from "../entities/Updoot";
 import {
   Arg,
   Ctx,
@@ -61,6 +62,7 @@ export class PostResolver {
   async posts(
     @Arg("limit", () => Int) limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string | null,
+    @Ctx() { req: { session } }: MyContext,
     @Info() _: any // info object에 있는 필드를 활용할 수 있다.
   ): Promise<PaginatedPosts> {
     //pagination 활용 : 한 번에 모든 페이지 데이터를 가져오는 것은 바람직하지 못하다.
@@ -72,22 +74,35 @@ export class PostResolver {
     // cf) queryBuilder 없이 진행할 경우. 직접 inner join을 한 다음에 그 데이터들을
     // join된 column들을 갖고 직접 새로운 객체로 만들어야 한다.
     // 아니면  DB에서 지원하는 JSON 생성 함수를 사용해서 특정 필드에 객체를 넣어서 전송할 수 있다.
-    const qb = getConnection()
-      .getRepository(Post)
-      .createQueryBuilder("p") // alias for post
-      .innerJoinAndSelect("p.creator", "u", "u.id = p.creatorId")
-      .orderBy("p.createdAt", "DESC")
-      .take(realLimit); // 질의 개수 설정
-
-    if (cursor) {
-      qb.where("p.createdAt < :cursor", { cursor: new Date(+cursor) });
-      // new Date로 완전히 Date 객체로 바꾸어야 비교가 가능하다.
-      // cursor보다 일찍 생성된 컨텐츠만 출력한다.
-
-      // 조건에 따라서 순서와 상관 없이 qb에 query를 추가할 수 있다.
+    console.log(session.userId);
+    const posts = await getConnection().query(
+      `
+      select p.*,
+      JSON_OBJECT(
+        'id', u.id,
+        'username', u.username,
+        'email', u.email,
+        'createdAt', u.createdAt,
+        'updatedAt', u.updatedAt
+      ) creator,
+      ${
+        session.userId
+          ? `(SELECT value from updoot u where u.userId = ${session.userId} and u.postId = p.id ) voteStatus`
+          : `null voteStatus` // sql 기본 값 설정 => null도 하나의 예약어
+      }
+      from post as p
+      inner join user as u 
+      on u.id = p.creatorId
+      ${cursor ? `where p. createdAt < ?` : ""}
+      order by p.createdAt DESC
+      limit ?
+    `,
+      cursor ? [new Date(+cursor), realLimit] : [realLimit]
+    );
+    for (let post of posts) {
+      post.creator = JSON.parse(post.creator);
+      console.log(post.voteStatus);
     }
-
-    const posts = await qb.getMany();
     const hasMore = posts.length === realLimit;
 
     return {
@@ -109,29 +124,64 @@ export class PostResolver {
     @Arg("value", () => Int!) value: number,
     @Ctx() { req: { session } }: MyContext
   ): Promise<boolean> {
-    const { userId } = session;
     const isUpdoot = value !== -1;
-    const realValue = isUpdoot ? 1 : -1;
     // 일종의 선언 : 30포인트 들어와도 1 포인트만 주겠다.
     // 클라이언트의 숫자에서 신경쓰는 것은 +1이냐 -1이냐
+    const realValue = isUpdoot ? 1 : -1;
+    const { userId } = session;
+    // Database에 먼저 중복되는 updoot 레코드가 있는지 확인한다.
+    const updoot = await Updoot.findOne({ postId, userId });
 
-    // increase the count on post
-    await getConnection().transaction(async (em) => {
-      await em.query(
-        `
-        insert into updoot(userId, postId, value)
-        values(?,?,?);
+    // user has voted on the post before
+    if (updoot) {
+      if (updoot.value === realValue) {
+        // 중복;
+        return false;
+      }
+      // transaction을 통해
+      // updoot를 바꾸고
+      // 바꾼 값의 2배를 values에 추가한다.
+      await getConnection().transaction(async (em) => {
+        await em.query(
+          `
+          update updoot set value = ? 
+          where postId = ? and userId = ?
         `,
-        [userId, postId, realValue]
-      );
-      await em.query(`
-   update post p SET points = points + ${realValue} where p.id = ${postId};
+          [realValue, postId, userId]
+        );
+        await em.query(
+          `
+          update post 
+          set points = points + ? 
+          where id = ?
+        `,
+          [realValue * 2, postId]
+        );
+      });
+      return true;
+    } else {
+      // has never voted
+      await getConnection().transaction(async (em) => {
+        await em.query(
+          `
+          insert into updoot(userId, postId, value)
+          values(?,?,?);
+        `,
+          [userId, postId, realValue]
+        );
+        await em.query(`
+          update post p 
+          SET points = points + ${realValue} 
+          where p.id = ${postId};
     `);
-    });
-    // transaction 단위로 묶어서 하나의 쿼리가 실패하면 둘 다 실패한 것으로 간주한다.
+      });
+      // transaction 단위로 묶어서 하나의 쿼리가 실패하면 둘 다 실패한 것으로 간주한다.
 
-    return true;
+      return true;
+    }
   }
+
+  // increase the count on post
 
   @Mutation(() => PostResponse) // 데이터를 변경(C,U,D)를 할 때 사용하는 decorator
   @UseMiddleware(isAuth) // resolver로 context가 가기 전에 먼저 확인하는 middleware 장착 가능

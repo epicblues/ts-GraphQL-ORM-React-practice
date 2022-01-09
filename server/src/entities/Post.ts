@@ -23,6 +23,10 @@ export class Post extends BaseEntity {
   id!: number;
   // non-null/non-undefined operator
 
+  // DB에서는 활용하지 않는 graphql용 schema value
+  @Field(() => Int, { nullable: true })
+  voteStatus: number | null; // 1 or -1 or null;
+
   @Field(() => String)
   @Column({ type: "text" })
   title!: string;

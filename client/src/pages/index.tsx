@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Heading, Link, Text } from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, IconButton, Link, Text } from '@chakra-ui/react';
 import { withUrqlClient } from 'next-urql';
 import { Layout } from '../components/Layout';
 import { NavBar } from '../components/NavBar';
@@ -6,7 +6,9 @@ import { usePostsQuery } from '../generated/graphql';
 import { createUrqlClient } from '../utils/createUrqlClient';
 import NextLink from 'next/link'
 import { Stack } from '@chakra-ui/react'
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ChevronDownIcon, ChevronUpIcon, Icon } from '@chakra-ui/icons';
+import { UpdootSection } from '../components/UpdootSection';
 
 const Index = () => {
   const [variables, setVariables] = useState<{ limit: number, cursor?: string }>({ limit: 15 });
@@ -30,19 +32,19 @@ const Index = () => {
         </NextLink>
       </Flex>
       <Stack spacing={8} mt={4}>
-        {data ? data.posts.posts.map(p => (
+        {data ? data.posts.posts.map(p => {
+          return (
 
-          <Box key={p.id} p={5} shadow={"md"} borderWidth={"1px"} >
-            <Box >
-
-              <Heading fontSize={"2xl"}>{p.title}</Heading>
-
-              <Text>posted by {p.creator.username}</Text>
-
-            </Box>
-            <Text mt={4}>{p.textSnippet}</Text>
-          </Box>
-        )) : <div>Loading</div>}
+            <Flex key={p.id} p={5} shadow={"md"} borderWidth={"1px"}>
+              <UpdootSection post={p} />
+              <Box>
+                <Heading fontSize={"2xl"}>{p.title}</Heading>
+                <Text>posted by {p.creator.username}</Text>
+                <Text mt={4}>{p.textSnippet}</Text>
+              </Box>
+            </Flex>
+          );
+        }) : <div>Loading</div>}
 
       </Stack>
       {(data && data.posts.hasMore) &&
