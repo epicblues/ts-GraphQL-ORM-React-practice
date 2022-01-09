@@ -42,7 +42,6 @@ const EditPost = ({ }) => {
   )
   // 사용자가 수정 권한이 있는 사용자인가?
   if (!meData || meData.me?.id !== data?.post?.creatorId) {
-
     return (
       <Layout>
         Not Authorized

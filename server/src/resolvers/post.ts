@@ -19,6 +19,7 @@ import { Post } from "../entities/Post";
 import { isAuth } from "../middleware/isAuth";
 import { MyContext } from "../types";
 import { FieldError } from "./FieldError";
+import { User } from "../entities/User";
 
 @InputType()
 class PostInput {
@@ -58,6 +59,32 @@ export class PostResolver {
     return root.length > 50 ? root.slice(0, 50).concat("...") : root;
   }
 
+  // join되는 데이터를 쿼리가 아니라 graphql의 fieldResolver를 통해
+  // 가져오는 방식
+  // 하지만 속도, 정확성 등에서 sql로 질의하는 것보다 좋지 않다.
+  @FieldResolver(() => User, { nullable: true })
+  async creator(
+    @Root("creatorId") creatorId: number
+  ): Promise<User | undefined> {
+    const user = User.findOne({ id: creatorId });
+    return user;
+  }
+
+  @FieldResolver(() => Int, { nullable: true })
+  async voteStatus(
+    @Root() post: Post,
+    @Ctx() { req }: MyContext
+  ): Promise<number | null> {
+    if (!req.session.userId) return null;
+
+    const updoot = await Updoot.findOne({
+      userId: req.session.userId,
+      postId: post.id,
+    });
+
+    return updoot ? updoot.value : null;
+  }
+
   @Query(() => PaginatedPosts) // 이 query를 통해 return 할 데이터의 type
   async posts(
     @Arg("limit", () => Int) limit: number,
@@ -71,38 +98,21 @@ export class PostResolver {
     const realLimit = Math.min(50, limit) + 1; // 최대 50 record를 db에서 질의하도록
     // 더 받을 수 있는 data가 있는지 trick 부여
 
-    // cf) queryBuilder 없이 진행할 경우. 직접 inner join을 한 다음에 그 데이터들을
-    // join된 column들을 갖고 직접 새로운 객체로 만들어야 한다.
-    // 아니면  DB에서 지원하는 JSON 생성 함수를 사용해서 특정 필드에 객체를 넣어서 전송할 수 있다.
     console.log(session.userId);
-    const posts = await getConnection().query(
-      `
-      select p.*,
-      JSON_OBJECT(
-        'id', u.id,
-        'username', u.username,
-        'email', u.email,
-        'createdAt', u.createdAt,
-        'updatedAt', u.updatedAt
-      ) creator,
-      ${
-        session.userId
-          ? `(SELECT value from updoot u where u.userId = ${session.userId} and u.postId = p.id ) voteStatus`
-          : `null voteStatus` // sql 기본 값 설정 => null도 하나의 예약어
-      }
-      from post as p
-      inner join user as u 
-      on u.id = p.creatorId
-      ${cursor ? `where p. createdAt < ?` : ""}
-      order by p.createdAt DESC
-      limit ?
-    `,
-      cursor ? [new Date(+cursor), realLimit] : [realLimit]
-    );
-    for (let post of posts) {
-      post.creator = JSON.parse(post.creator);
-      console.log(post.voteStatus);
+    const qb = Post.createQueryBuilder().select();
+    // 다른 graphql 필드(join, 특수 상황)들을 FieldResolver로 해결했을 경우
+    // 해당 사항에 대한 query는 할 필요가 없다.
+    // type-graphql 에서 질의된 결과값을 보고
+    // 다시 fieldResolver로 가서 추가적인 데이터를 얻은 뒤에
+    // graphql 요청에 맞춘 객체를 완성시키고 전송한다.
+    // 여기서는 creator, voteStatus가 그  예시다.
+    if (cursor) {
+      qb.where("createdAt < :cursor", { cursor: new Date(+cursor) });
     }
+    qb.limit(realLimit);
+    qb.orderBy("createdAt", "DESC");
+    const posts = await qb.getMany();
+
     const hasMore = posts.length === realLimit;
 
     return {
@@ -115,7 +125,7 @@ export class PostResolver {
   async post(@Arg("id", () => Int!) id: number): Promise<Post | undefined> {
     // apolloServer 인스턴스를 생성할 때 context 옵션에 넣은 객체를 사용할 수 있다.
 
-    return Post.findOne(id, { relations: ["creator"] });
+    return Post.findOne(id);
     // 저절로 inner join을 시켜주는 TypeORM 메서드
     // join된 table의 정보들을 내가 relation decorator로 등록했던 필드에 넣는다.
   }
@@ -234,10 +244,7 @@ export class PostResolver {
       .execute();
 
     if (newResult.affected === 1) {
-      return await (Post.findOne(
-        { id },
-        { relations: ["creator"] }
-      ) as Promise<Post>);
+      return await (Post.findOne({ id }) as Promise<Post>);
     }
     return null;
   }

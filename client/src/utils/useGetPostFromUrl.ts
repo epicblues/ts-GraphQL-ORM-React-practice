@@ -9,7 +9,7 @@ export const useGetPostFromUrl = (): [
   NextRouter
 ] => {
   const router = useRouter();
-  const id = typeof router.query.id === "string" ? +router.query.id : -1;
+  const id = typeof router.query.id === "string" ? +router.query.id : -1; 
   return [
     ...usePostQuery({
       pause: id === -1, // 이 조건이 만족되면 query를 실행하지 않는다.
