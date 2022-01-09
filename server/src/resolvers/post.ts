@@ -216,19 +216,30 @@ export class PostResolver {
   @Mutation(() => Post, { nullable: true })
   @UseMiddleware(isAuth)
   async updatePost(
-    @Arg("title", () => String, { nullable: true }) title: string,
-    @Arg("id") id: number
+    @Arg("title", () => String) title: string,
+    @Arg("text", () => String) text: string,
+    @Arg("id", () => Int) id: number,
+    @Ctx() { req }: MyContext
   ): Promise<Post | null> {
-    const post = await Post.findOne(id);
-    if (!post) {
-      return null;
-    }
-    if (typeof title !== "undefined") {
-      // entity의 제목을 서버에서 수정하고 수정한 내용을 서버에 질의
-      await Post.update({ id }, { title });
-    }
+    // const result = await Post.update(
+    //   { id, creatorId: req.session.userId },
+    //   { title, text }
+    // );
 
-    return post;
+    const newResult = await getConnection()
+      .createQueryBuilder()
+      .update(Post)
+      .set({ title, text })
+      .where({ id, creatorId: req.session.userId })
+      .execute();
+
+    if (newResult.affected === 1) {
+      return await (Post.findOne(
+        { id },
+        { relations: ["creator"] }
+      ) as Promise<Post>);
+    }
+    return null;
   }
   @Mutation(() => Boolean)
   @UseMiddleware(isAuth)

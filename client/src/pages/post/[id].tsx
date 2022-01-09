@@ -1,23 +1,22 @@
-import { Box, Heading } from '@chakra-ui/react'
+import { Box, Flex, Heading, IconButton } from '@chakra-ui/react'
 import { withUrqlClient } from 'next-urql'
-import { useRouter } from 'next/router'
+import Router, { useRouter } from 'next/router'
 import React from 'react'
 import { Layout } from '../../components/Layout'
-import { usePostQuery } from '../../generated/graphql'
+import { useDeletePostMutation, useMeQuery, usePostQuery } from '../../generated/graphql'
 import { createUrqlClient } from '../../utils/createUrqlClient'
-
+import { useGetPostFromUrl } from '../../utils/useGetPostFromUrl'
+import NextLink from 'next/link'
+import { Link } from '@chakra-ui/react'
+import { DeleteIcon, EditIcon } from '@chakra-ui/icons'
+import { EditDeletePostButtons } from '../../components/EditDeletePostButtons'
 
 
 const Post = ({ }) => {
-  const router = useRouter();
-  const intId = typeof router.query.id === "string" ? +router.query.id : -1
-  console.log(intId);
-  const [{ data, fetching, error }] = usePostQuery({
-    pause: intId === -1,
-    variables: { id: intId }
-  })
+  const [{ data, fetching, error }, , , router] = useGetPostFromUrl()
   // pause가 true일 경우 해당 query를 실행하지 않는다.
 
+  const [, deletePost] = useDeletePostMutation()
   // state checking component
   if (fetching) return (
     <Layout>
@@ -38,14 +37,21 @@ const Post = ({ }) => {
       Could not find the post
     </Layout>
   )
-
+  const p = data.post;
 
   return (
 
     <Layout>
-      <Heading>
-        {data.post.title}
+      <Heading >
+        <Flex>
 
+          {data.post.title}
+
+          <EditDeletePostButtons postId={p.id} onDelete={async () => {
+            await deletePost({ id: p.id });
+            router.push('/');
+          }} ml="auto" creatorId={p.creatorId} />
+        </Flex>
       </Heading>
       <Box mt={5}>
         {data.post.text}

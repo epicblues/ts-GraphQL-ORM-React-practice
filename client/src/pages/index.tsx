@@ -1,11 +1,12 @@
-import { DeleteIcon } from '@chakra-ui/icons';
+import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import { Box, Button, Flex, Heading, IconButton, Link, Stack, Text } from '@chakra-ui/react';
 import { withUrqlClient } from 'next-urql';
 import NextLink from 'next/link';
 import { useState } from 'react';
+import { EditDeletePostButtons } from '../components/EditDeletePostButtons';
 import { Layout } from '../components/Layout';
 import { UpdootSection } from '../components/UpdootSection';
-import { useDeletePostMutation, usePostsQuery } from '../generated/graphql';
+import { useDeletePostMutation, useMeQuery, usePostsQuery } from '../generated/graphql';
 import { createUrqlClient } from '../utils/createUrqlClient';
 
 const Index = () => {
@@ -42,12 +43,10 @@ const Index = () => {
               <Text>posted by {p.creator.username}</Text>
               <Flex>
                 <Text mt={4}>{p.textSnippet}</Text>
-                <IconButton aria-label='delete-post' bgColor={"red"} icon={<DeleteIcon boxSize={5} />} onClick={() => {
-                  deletePost({ id: p.id })
-                }}
-                  ml={"auto"}
 
-                >Delete</IconButton>
+                <EditDeletePostButtons postId={p.id} onDelete={async () => {
+                  deletePost({ id: p.id })
+                }} ml={"auto"} creatorId={p.creatorId} />
 
               </Flex>
             </Flex>
