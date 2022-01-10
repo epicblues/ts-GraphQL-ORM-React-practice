@@ -2,6 +2,10 @@ import DataLoader from "dataloader";
 import { Updoot } from "../entities/Updoot";
 import { User } from "../entities/User";
 
+// batches all the user id's to single function call(single SQL statement)
+// 해당 function call에서 모은 key 값을 기반으로 한 번에 질의
+// 질의가 끝나면 매칭된 키를 통해 값을 return(Promise 형태인 이유)
+
 export interface UpdootArgument {
   userId: number;
   postId: number;
@@ -23,21 +27,27 @@ export const createUserLoader = () =>
       userIdToUser[user.id] = user;
     });
     // 순서대로 매칭해야 한다!!!!
+    // 질의 결과가 처음에 들어온 id 순서대로 정렬되어 있지 않을 가능성 높다.
     return userIds.map((id) => userIdToUser[id]);
   });
+// key [{userId:10, postId:20}, {userId:22, postId:30}]
+// value [undefined, {userId:22, postId,30, value:-1}]
 
 export const createUpdootLoader = () =>
-  new DataLoader<UpdootArgument, Updoot>(
+  new DataLoader<UpdootArgument, Updoot | null>(
     // 핵심 : 들어온 key 값에 순서대로 매칭
-    async (arg) => {
-      const updoots = (await Updoot.find({ where: arg })) as Updoot[];
-
+    async (keys) => {
+      const updoots = (await Updoot.find({ where: keys })) as Updoot[];
+      // where 조건을 배열 형태로 넣을 수 있다. SQL의  OR와 같은 개념
       // 정렬해보자!
-      return arg.map((args) => {
-        return updoots.find(
-          (updoot) =>
-            updoot.userId === args.userId && updoot.postId === args.postId
-        ) as Updoot;
+      const mappedUpdoots: Record<string, Updoot> = {};
+      updoots.forEach((updoot) => {
+        mappedUpdoots[`${updoot.userId}:${updoot.postId}`] = updoot;
       });
+
+      // arg의 순서대로 값 매칭
+      return keys.map(
+        (updoot) => mappedUpdoots[`${updoot.userId}:${updoot.postId}`]
+      );
     }
   );

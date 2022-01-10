@@ -1,29 +1,22 @@
 import { Cache, cacheExchange, Resolver } from "@urql/exchange-graphcache";
-import { resolveObjectURL } from "buffer";
 import { NextUrqlClientConfig, SSRExchange } from "next-urql";
-import { RequestInit } from "next/dist/server/web/spec-extension/request";
 import Router from "next/router";
 import {
   CombinedError,
   dedupExchange,
   errorExchange,
-  ExchangeInput,
   fetchExchange,
   Operation,
   stringifyVariables,
 } from "urql";
 import {
-  CreatePostMutation,
   LoginMutation,
   LogoutMutation,
   MeDocument,
   MeQuery,
   MutationDeletePostArgs,
-  PaginatedPosts,
-  PostsDocument,
   PostSnippetFragment,
   PostSnippetFragmentDoc,
-  PostsQuery,
   RegisterMutation,
   VoteMutation,
   VoteMutationVariables,
@@ -33,7 +26,6 @@ import { isServer } from "./isServer";
 
 const invalidateQueryField = (cache: Cache, fieldName: string) => {
   const fieldInfos = cache.inspectFields("Query");
-  console.log("invalidate", fieldInfos);
   fieldInfos.forEach((fi) => {
     if (fi.fieldName !== fieldName) return;
     cache.invalidate("Query", fi.fieldName, fi.arguments);
@@ -52,14 +44,16 @@ const cursorPagination = (): Resolver => {
     if (size === 0) {
       return undefined;
     }
-    console.log("cursorpagination", fieldArgs); // 실행되서 이 함수를 호출한 필드의 인자 {limit : 10}
     const isCacheRemains = cache.resolve(
       entityKey,
       `${fieldName}(${stringifyVariables(fieldArgs)})`
     );
     // cache가 그대로 남아 있으면 partial을 true 바꿀 필요가 없다.
-    info.partial = !isCacheRemains; // 데이터 가져 와!
-
+    // 데이터 가져 와!
+    // delete하면 특정 쿼리 데이터들만 사라진다.
+    info.partial = !isCacheRemains;
+    // 쿼리 데이터가 사라지면 urql은 사라진 데이터를 모두 질의하는 것이 아니라
+    // 브라우저에서 요청한 것만 다시 질의하ㅡㄴ다.
     let hasMore = true;
     const data: string[] = [];
     fieldInfos.forEach((fi) => {
@@ -127,10 +121,7 @@ export const createUrqlClient: NextUrqlClientConfig = (
               cache,
               info
             ) => {
-              cache.invalidate({
-                __typename: "Post",
-                id: args.id!,
-              });
+              invalidateQueryField(cache, "posts");
             }, // cache에 등록된 특정 데이터 타입을 지우면 기존에 그 데이터를 가져왔던 쿼리를 다시 수행해서 갱신한다.
 
             vote: (

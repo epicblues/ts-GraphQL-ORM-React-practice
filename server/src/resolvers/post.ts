@@ -20,7 +20,7 @@ import { isAuth } from "../middleware/isAuth";
 import { MyContext } from "../types";
 import { FieldError } from "./FieldError";
 import { User } from "../entities/User";
-import { UpdootArgument } from "src/utils/createUserLoader";
+import { UpdootArgument } from "src/utils/createDataLoader";
 
 @InputType()
 class PostInput {
@@ -66,13 +66,16 @@ export class PostResolver {
   // 다른 Query/Mutation에서 Post를 받아오면
   // 그 post의 데이터를 기반(Root)으로 다시 db에 질의를 하는 방식
   // 10개 record -> 총 11개의 쿼리
+  // -> DataLoader를 사용하면 어느 정도 해결!
   @FieldResolver(() => User, { nullable: true })
   async creator(
     @Root("creatorId") creatorId: number,
     @Ctx() { userLoader }: MyContext
   ): Promise<User | undefined> {
     const user = userLoader.load(creatorId);
-    // userLoader에 데이터가 있을 경우 다시 query를 하지 않는다.
+    // batches all the user id's to single function call
+    // 해당 function call에서 모은 key 값을 기반으로 한 번에 질의
+    // 질의가 끝나면 매칭된 키를 통해 값을 return(Promise 형태인 이유)
     return user;
   }
 
@@ -86,9 +89,7 @@ export class PostResolver {
       userId: req.session.userId,
       postId: post.id,
     };
-    console.log("voteStatuss resolover");
     const updoot = await updootLoader.load(updootArg);
-    console.log("updoot resut", updoot);
 
     return updoot ? updoot.value : null;
   }

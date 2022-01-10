@@ -8,7 +8,6 @@ interface NavBarProps {
 }
 
 export const NavBar: React.FC<NavBarProps> = ({ }) => {
-
   let body = null;
   const [{ fetching, data, }] = useMeQuery()
   // fetching 을 통해 마치 promise pending state를 조회하듯이 상태를 확인하고
@@ -56,7 +55,7 @@ export const NavBar: React.FC<NavBarProps> = ({ }) => {
         <Box mr={4}>
           {data.me.username}
         </Box>
-        <Button variant="link" onClick={() => { logout() }} isLoading={logoutFetching}>Logout</Button>
+        <Button variant="link" onClick={async () => { await logout(); router.reload(); }} isLoading={logoutFetching}>Logout</Button>
       </>
     )
   }

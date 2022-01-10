@@ -10,7 +10,7 @@ import { createUrqlClient } from '../utils/createUrqlClient';
 
 const Index = () => {
   const [variables, setVariables] = useState<{ limit: number, cursor?: string }>({ limit: 15 });
-  const [{ data, fetching, }] = usePostsQuery({ variables });
+  const [{ data, error, fetching, }] = usePostsQuery({ variables });
   // query에 variable이 필요한 경우
   const [, deletePost] = useDeletePostMutation();
   // SSR을 true로 해 놓을 경우 fetching이 false로 될 때 까지 페이지 응답을 보내지 않는다.
@@ -18,7 +18,7 @@ const Index = () => {
   // runtime 이 함수로 들어왔을 때 이 부분을 먼저 확인한다.
   if (!fetching && (!data)) {
 
-    return <div>You got query failed for some reason</div>
+    return <div>{error?.message}</div>
   }
 
   return (
@@ -45,6 +45,7 @@ const Index = () => {
 
                 <EditDeletePostButtons postId={p.id} onDelete={async () => {
                   deletePost({ id: p.id })
+                  setVariables({ limit: 15 });
                 }} ml={"auto"} creatorId={p.creatorId} />
 
               </Flex>

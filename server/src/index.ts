@@ -21,7 +21,7 @@ import { Post } from "./entities/Post";
 
 import path from "path";
 import { Updoot } from "./entities/Updoot";
-import { createUpdootLoader, createUserLoader } from "./utils/createUserLoader";
+import { createUpdootLoader, createUserLoader } from "./utils/createDataLoader";
 
 try {
   (async () => {
@@ -86,7 +86,7 @@ try {
       }), // 각 resolver가 db에 실제로 접근하기 위한 연결
       // session에 접근할 수 있게 req,res를 인자로 받는 callback 함수를 설정할 수 있다.
       // 매번 요청이 올 떄마다 context를 생성한다.
-      // 즉 매 요청마다 userLoader를 만든다.
+      // 매 요청마다 userLoader를 만든다. (요청 별 임시 저장소)
       plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
     });
 
