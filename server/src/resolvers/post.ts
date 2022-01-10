@@ -20,6 +20,7 @@ import { isAuth } from "../middleware/isAuth";
 import { MyContext } from "../types";
 import { FieldError } from "./FieldError";
 import { User } from "../entities/User";
+import { UpdootArgument } from "src/utils/createUserLoader";
 
 @InputType()
 class PostInput {
@@ -62,25 +63,32 @@ export class PostResolver {
   // join되는 데이터를 쿼리가 아니라 graphql의 fieldResolver를 통해
   // 가져오는 방식
   // 하지만 속도, 정확성 등에서 sql로 질의하는 것보다 좋지 않다.
+  // 다른 Query/Mutation에서 Post를 받아오면
+  // 그 post의 데이터를 기반(Root)으로 다시 db에 질의를 하는 방식
+  // 10개 record -> 총 11개의 쿼리
   @FieldResolver(() => User, { nullable: true })
   async creator(
-    @Root("creatorId") creatorId: number
+    @Root("creatorId") creatorId: number,
+    @Ctx() { userLoader }: MyContext
   ): Promise<User | undefined> {
-    const user = User.findOne({ id: creatorId });
+    const user = userLoader.load(creatorId);
+    // userLoader에 데이터가 있을 경우 다시 query를 하지 않는다.
     return user;
   }
 
   @FieldResolver(() => Int, { nullable: true })
   async voteStatus(
     @Root() post: Post,
-    @Ctx() { req }: MyContext
+    @Ctx() { req, updootLoader }: MyContext
   ): Promise<number | null> {
     if (!req.session.userId) return null;
-
-    const updoot = await Updoot.findOne({
+    const updootArg: UpdootArgument = {
       userId: req.session.userId,
       postId: post.id,
-    });
+    };
+    console.log("voteStatuss resolover");
+    const updoot = await updootLoader.load(updootArg);
+    console.log("updoot resut", updoot);
 
     return updoot ? updoot.value : null;
   }
@@ -126,8 +134,6 @@ export class PostResolver {
     // apolloServer 인스턴스를 생성할 때 context 옵션에 넣은 객체를 사용할 수 있다.
 
     return Post.findOne(id);
-    // 저절로 inner join을 시켜주는 TypeORM 메서드
-    // join된 table의 정보들을 내가 relation decorator로 등록했던 필드에 넣는다.
   }
 
   @Mutation(() => Boolean)

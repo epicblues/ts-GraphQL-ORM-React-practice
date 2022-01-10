@@ -21,6 +21,7 @@ import { Post } from "./entities/Post";
 
 import path from "path";
 import { Updoot } from "./entities/Updoot";
+import { createUpdootLoader, createUserLoader } from "./utils/createUserLoader";
 
 try {
   (async () => {
@@ -76,8 +77,16 @@ try {
         resolvers: [HelloResolver, PostResolver, UserResolver],
         validate: false,
       }),
-      context: ({ req, res }): MyContext => ({ req, res, redis }), // 각 resolver가 db에 실제로 접근하기 위한 연결
+      context: ({ req, res }): MyContext => ({
+        req,
+        res,
+        redis,
+        userLoader: createUserLoader(),
+        updootLoader: createUpdootLoader(),
+      }), // 각 resolver가 db에 실제로 접근하기 위한 연결
       // session에 접근할 수 있게 req,res를 인자로 받는 callback 함수를 설정할 수 있다.
+      // 매번 요청이 올 떄마다 context를 생성한다.
+      // 즉 매 요청마다 userLoader를 만든다.
       plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
     });
 
